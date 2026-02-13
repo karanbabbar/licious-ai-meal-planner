@@ -17,6 +17,7 @@ const T = {
   r: { s: "10px", m: "14px", l: "18px", xl: "24px", full: "9999px" },
   sh: { s: "0 1px 3px rgba(0,0,0,0.06)", m: "0 4px 12px rgba(0,0,0,0.07)" },
 };
+const mono = "'JetBrains Mono', monospace";
 
 const Styles = () => (
   <style>{`
@@ -269,7 +270,7 @@ const Results = ({ data, onContinue }) => {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {macros.map((m, i) => <div key={i} className={"up" + i} style={{ padding: 16, background: T.white, borderRadius: T.r.l, border: "1px solid " + T.g[100], boxShadow: T.sh.m }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}><span style={{ fontSize: 11, fontWeight: 700, color: T.g[500], textTransform: "uppercase", letterSpacing: "0.04em" }}>{m.label}</span><span style={{ fontSize: 14 }}>{m.icon}</span></div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 2 }}><span style={{ fontSize: 26, fontWeight: 800, color: m.color, fontFamily: "'JetBrains Mono'" }}>{m.val}</span><span style={{ fontSize: 12, fontWeight: 600, color: T.g[400] }}>{m.unit}</span></div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 2 }}><span style={{ fontSize: 26, fontWeight: 800, color: m.color, fontFamily: mono }}>{m.val}</span><span style={{ fontSize: 12, fontWeight: 600, color: T.g[400] }}>{m.unit}</span></div>
           </div>)}
         </div>
       </div>
@@ -280,6 +281,203 @@ const Results = ({ data, onContinue }) => {
       <div style={{ padding: "16px 24px 36px" }}><Btn onClick={onContinue} full>Pick Protein Sources <span>→</span></Btn></div>
     </div>
   );
+};
+
+// ===== VISUAL MEAL PLANNING COMPONENTS =====
+
+const DistributionPicker = ({ target, onSelect }) => {
+  const [sel, setSel] = useState("equal");
+  const dists = [
+    { id: "equal", label: "Equal", icon: "⚖️", vals: [Math.floor(target/3), Math.floor(target/3), target - 2*Math.floor(target/3)] },
+    { id: "heavy_bfast", label: "Heavy breakfast", icon: "🌅", vals: [Math.round(target*0.4), Math.round(target*0.3), target - Math.round(target*0.4) - Math.round(target*0.3)] },
+    { id: "heavy_dinner", label: "Heavy dinner", icon: "🌙", vals: [Math.round(target*0.3), Math.round(target*0.3), target - 2*Math.round(target*0.3)] },
+  ];
+  const colors = [T.brand, T.green, T.blue];
+  const meals = ["Bfast", "Lunch", "Dinner"];
+
+  return (
+    <div className="si" style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
+      <p style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 12 }}>How to split your {target}g protein?</p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {dists.map(d => (
+          <button key={d.id} onClick={() => { setSel(d.id); onSelect && onSelect(d.id, d.label); }} style={{
+            display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 14,
+            border: "2px solid " + (sel === d.id ? T.brand : T.g[200]), background: sel === d.id ? T.brandLt : T.white,
+            cursor: "pointer", textAlign: "left",
+          }}>
+            <span style={{ fontSize: 22, flexShrink: 0 }}>{d.icon}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: sel === d.id ? T.brand : T.dark, marginBottom: 6 }}>{d.label}</div>
+              <div style={{ display: "flex", gap: 2, height: 6 }}>
+                {d.vals.map((v, i) => (
+                  <div key={i} style={{ flex: v, height: "100%", borderRadius: 3, background: sel === d.id ? colors[i] : T.g[200], opacity: sel === d.id ? 1 : 0.5, transition: "all .3s" }} />
+                ))}
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+                {meals.map((m, i) => (
+                  <span key={m} style={{ fontSize: 10, color: sel === d.id ? colors[i] : T.g[400], fontWeight: 600 }}>{m} {d.vals[i]}g</span>
+                ))}
+              </div>
+            </div>
+            {sel === d.id && <div style={{ width: 20, height: 20, borderRadius: "50%", background: T.brand, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><span style={{ color: "#fff", fontSize: 11 }}>✓</span></div>}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const ProductCard = ({ product, selected, onSelect }) => {
+  return (
+    <button onClick={onSelect} className="si" style={{
+      padding: 8, borderRadius: 14, border: "2px solid " + (selected ? T.brand : T.g[200]),
+      background: selected ? T.brandLt : T.white, cursor: "pointer", textAlign: "left",
+      boxShadow: selected ? "0 4px 12px " + T.brand + "15" : "0 1px 4px rgba(0,0,0,0.04)",
+    }}>
+      <div style={{ width: "100%", aspectRatio: "1", borderRadius: 10, background: T.g[100], overflow: "hidden", marginBottom: 8, position: "relative" }}>
+        {product.image_url ? <img src={product.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { e.target.style.display = "none"; }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🥩</div>}
+        {selected && (
+          <div style={{ position: "absolute", top: 6, right: 6, width: 22, height: 22, borderRadius: "50%", background: T.brand, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ color: "#fff", fontSize: 12, fontWeight: 800 }}>✓</span>
+          </div>
+        )}
+      </div>
+      <p style={{ fontSize: 11, fontWeight: 700, color: T.dark, lineHeight: 1.3, marginBottom: 4, minHeight: 28 }}>{product.name}</p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ fontSize: 14, fontWeight: 800, color: T.brand, fontFamily: mono }}>₹{product.price}</span>
+        <span style={{ fontSize: 9, fontWeight: 700, color: T.green, background: T.greenLt, padding: "2px 6px", borderRadius: 99 }}>
+          {product.protein}g{product.unit ? "/egg" : "/100g"}
+        </span>
+      </div>
+      <p style={{ fontSize: 10, color: T.g[400], marginTop: 3 }}>{product.pack_size}</p>
+    </button>
+  );
+};
+
+const PortionCard = ({ mealLabel, target, portions }) => {
+  const total = portions.reduce((s, p) => s + p.protein, 0);
+  return (
+    <div className="si" style={{ padding: 14, background: T.white, borderRadius: 16, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <p style={{ fontSize: 13, fontWeight: 800, color: T.dark }}>{mealLabel} portions</p>
+        <span style={{ fontSize: 11, fontWeight: 700, color: total >= target ? T.green : T.amber, background: total >= target ? T.greenLt : T.amberLt, padding: "3px 8px", borderRadius: 99 }}>
+          {total >= target ? "✓ Target met" : total + "/" + target + "g"}
+        </span>
+      </div>
+      {portions.map((p, i) => (
+        <div key={i} style={{ marginBottom: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: T.dark }}>{p.name}</span>
+            <span style={{ fontSize: 13, fontWeight: 800, color: T.green, fontFamily: mono }}>{p.protein}g</span>
+          </div>
+          <div style={{ height: 5, background: T.g[100], borderRadius: 3, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: Math.min(100, (p.protein / target) * 100) + "%", background: "linear-gradient(90deg, " + T.green + ", #34D399)", borderRadius: 3, transition: "width .6s ease" }} />
+          </div>
+          <span style={{ fontSize: 10, color: T.g[400], marginTop: 2, display: "block" }}>{p.quantity} from {p.pack}</span>
+        </div>
+      ))}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0 0", borderTop: "1px solid " + T.g[100], marginTop: 4 }}>
+        <span style={{ fontSize: 13, fontWeight: 800, color: T.dark }}>Total</span>
+        <span style={{ fontSize: 16, fontWeight: 800, color: T.green, fontFamily: mono }}>{total.toFixed(1)}g / {target}g</span>
+      </div>
+    </div>
+  );
+};
+
+const UtilizationPicker = ({ items, onConfirm }) => {
+  const [sel, setSel] = useState({});
+  return (
+    <div className="si" style={{ padding: 14, background: T.white, borderRadius: 16, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
+      <p style={{ fontSize: 13, fontWeight: 800, color: T.dark, marginBottom: 4 }}>Pack utilization</p>
+      <p style={{ fontSize: 11, color: T.g[400], marginBottom: 12 }}>What to do with leftover portions?</p>
+      {items.map((item, idx) => (
+        <div key={idx} style={{ marginBottom: idx < items.length - 1 ? 16 : 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: T.dark }}>{item.name}</span>
+            <span style={{ fontSize: 10, fontWeight: 600, color: T.amber, background: T.amberLt, padding: "2px 6px", borderRadius: 99 }}>{item.remaining}</span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {item.options.map((opt, i) => {
+              const isActive = sel[item.name] === opt.value;
+              return (
+                <button key={i} onClick={() => setSel(p => ({ ...p, [item.name]: opt.value }))} style={{
+                  display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10,
+                  border: "2px solid " + (isActive ? T.brand : T.g[200]), background: isActive ? T.brandLt : T.white,
+                  cursor: "pointer", textAlign: "left",
+                }}>
+                  <div style={{ width: 18, height: 18, borderRadius: "50%", border: "2px solid " + (isActive ? T.brand : T.g[300]), display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    {isActive && <div style={{ width: 10, height: 10, borderRadius: "50%", background: T.brand }} />}
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: isActive ? 600 : 500, color: isActive ? T.brand : T.g[600] }}>{opt.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+      {onConfirm && (
+        <button onClick={() => onConfirm(sel)} style={{ width: "100%", padding: "12px", borderRadius: 14, background: "linear-gradient(135deg, " + T.brand + ", " + T.brandDk + ")", color: "#fff", border: "none", fontSize: 14, fontWeight: 700, cursor: "pointer", marginTop: 12, boxShadow: "0 4px 16px " + T.brand + "40" }}>
+          Confirm & Continue
+        </button>
+      )}
+    </div>
+  );
+};
+
+const MealConfirmedBadge = ({ meal, protein, price }) => {
+  return (
+    <div className="si" style={{ padding: "12px 16px", background: T.greenLt, borderRadius: 14, border: "1px solid " + T.green + "20", display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ width: 28, height: 28, borderRadius: "50%", background: T.green, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ color: "#fff", fontSize: 13 }}>✓</span>
+        </div>
+        <div>
+          <span style={{ fontSize: 13, fontWeight: 700, color: T.green }}>{meal} locked</span>
+          <span style={{ fontSize: 11, color: T.g[500], display: "block" }}>{protein}g protein</span>
+        </div>
+      </div>
+      <span style={{ fontSize: 15, fontWeight: 800, color: T.dark, fontFamily: mono }}>₹{price}</span>
+    </div>
+  );
+};
+
+// Parse products from bot message text
+const parseProducts = (text) => {
+  const products = [];
+  const lines = text.split('\n');
+  lines.forEach(line => {
+    // Match patterns like: **Product Name** - 450g pack, ₹325, 21.6g protein/100g
+    const match = line.match(/\*\*([^*]+)\*\*\s*-\s*([^,]+),\s*₹(\d+)(?:,\s*([\d.]+)g\s*protein(?:\/100g)?)?/i);
+    if (match) {
+      products.push({
+        name: match[1].trim(),
+        pack_size: match[2].trim(),
+        price: parseInt(match[3]),
+        protein: match[4] ? parseFloat(match[4]) : 20,
+        image_url: null
+      });
+    }
+  });
+  return products;
+};
+
+// Detect which visual component to render
+const getVisualComponent = (msg) => {
+  if (!msg.text && !msg.data) return null;
+  const t = (msg.text || '').toLowerCase();
+  const step = msg.data?.current_step;
+  
+  if (step === 'budget_setup' || (t.includes('supplement') && t.includes('distribute')))
+    return 'distribution_setup';
+  if ((t.includes('₹') && t.includes('protein') && t.includes('pack')) || (t.includes('options') && t.includes('product')))
+    return 'product_cards';
+  if (t.includes('portion') && t.includes('total') && t.includes('protein') && !t.includes('confirm'))
+    return 'portion_summary';
+  if ((t.includes('remaining') || t.includes('leftover')) && (t.includes('option 1') || t.includes('option 2') || t.includes('same meal')))
+    return 'utilization_picker';
+  if ((t.includes('✅') || t.includes('locked')) || (t.includes('confirmed') && t.includes('complete')))
+    return 'meal_complete';
+  return null;
 };
 
 const ChatScreen = ({ sessionId, endpoint, title, icon, iconBg, journeyCurrent, mealSteps, onComplete, onRestart }) => {
@@ -324,12 +522,60 @@ const ChatScreen = ({ sessionId, endpoint, title, icon, iconBg, journeyCurrent, 
     return [];
   };
 
+  // Render visual component for bot messages
+  const renderVisualComponent = (msg) => {
+    const compType = getVisualComponent(msg);
+    if (!compType) return null;
+
+    switch (compType) {
+      case 'distribution_setup':
+        return <DistributionPicker target={154} onSelect={(id, label) => send(label + ", confirm")} />;
+      
+      case 'product_cards':
+        const products = parseProducts(msg.text);
+        if (products.length === 0) return null;
+        return (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 12 }}>
+            {products.map((p, i) => (
+              <ProductCard key={i} product={p} selected={false} onSelect={() => send(p.name)} />
+            ))}
+          </div>
+        );
+      
+      case 'portion_summary':
+        // Parse portions from message
+        const portionMatch = msg.text.match(/(\d+\.?\d*)g.*?total/gi);
+        if (!portionMatch) return null;
+        return <PortionCard mealLabel="Breakfast" target={62} portions={[
+          { name: "Chicken", protein: 30, quantity: "150g", pack: "450g pack" },
+          { name: "Eggs", protein: 32, quantity: "5 eggs", pack: "Pack of 6" }
+        ]} />;
+      
+      case 'utilization_picker':
+        return <UtilizationPicker 
+          items={[
+            { name: "Chicken Breast", remaining: "300g remaining", options: [
+              { label: "Use for next 2 days", value: "next_days" },
+              { label: "Use for lunch today", value: "other_meal" }
+            ]}
+          ]} 
+          onConfirm={(sel) => send("Option 1, next days")}
+        />;
+      
+      case 'meal_complete':
+        return <MealConfirmedBadge meal="Breakfast" protein={62.7} price={400} />;
+      
+      default:
+        return null;
+    }
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: T.bg }}>
       <div style={{ padding: "10px 20px", background: T.white, borderBottom: "1px solid " + T.g[100], display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{ width: 32, height: 32, borderRadius: T.r.m, background: iconBg, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 14 }}>{icon}</span></div>
         <div style={{ flex: 1 }}><div style={{ fontSize: 13, fontWeight: 700, color: T.dark }}>{title}</div></div>
-        {mealData?.running_price > 0 && <div style={{ padding: "3px 9px", borderRadius: T.r.full, background: T.dark }}><span style={{ fontSize: 12, fontWeight: 800, color: T.white, fontFamily: "'JetBrains Mono'" }}>{"₹" + mealData.running_price}</span></div>}
+        {mealData?.running_price > 0 && <div style={{ padding: "3px 9px", borderRadius: T.r.full, background: T.dark }}><span style={{ fontSize: 12, fontWeight: 800, color: T.white, fontFamily: mono }}>{"₹" + mealData.running_price}</span></div>}
         <button onClick={onRestart} style={{ width: 30, height: 30, borderRadius: T.r.m, border: "1px solid " + T.g[200], background: T.white, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: T.g[400] }} title="Start over">✕</button>
       </div>
       {mealSteps && <div style={{ padding: "8px 20px 6px", background: T.white, display: "flex", gap: 4, borderBottom: "1px solid " + T.g[100] }}>
@@ -339,10 +585,29 @@ const ChatScreen = ({ sessionId, endpoint, title, icon, iconBg, journeyCurrent, 
       </div>}
       {!mealSteps && <JourneyTracker steps={STEPS} current={journeyCurrent} />}
       <div className="no-sb" style={{ flex: 1, overflow: "auto", padding: "10px 12px 6px" }}>
-        {msgs.map((m, i) => <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", marginBottom: 8 }}>
-          {m.role === "user" ? <div className="si" style={{ padding: "9px 14px", background: T.brand, color: "#fff", borderRadius: "14px 14px 3px 14px", fontSize: 13.5, lineHeight: 1.5, maxWidth: "80%", fontWeight: 500 }}>{m.text}</div>
-          : <div className="si" style={{ padding: "10px 14px", background: T.white, border: "1px solid " + T.g[100], borderRadius: "3px 14px 14px 14px", fontSize: 13, lineHeight: 1.6, maxWidth: "90%", color: T.g[700], boxShadow: T.sh.s, whiteSpace: "pre-line" }}>{m.text}</div>}
-        </div>)}
+        {msgs.map((m, i) => {
+          const visualComp = m.role === "bot" ? renderVisualComponent(m) : null;
+          return (
+            <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", marginBottom: 8 }}>
+              {m.role === "user" ? (
+                <div className="si" style={{ padding: "9px 14px", background: T.brand, color: "#fff", borderRadius: "14px 14px 3px 14px", fontSize: 13.5, lineHeight: 1.5, maxWidth: "80%", fontWeight: 500 }}>{m.text}</div>
+              ) : (
+                <div style={{ maxWidth: "90%" }}>
+                  {visualComp ? (
+                    <>
+                      <p style={{ fontSize: 11, color: T.g[400], marginBottom: 6, lineHeight: 1.4 }}>{m.text.substring(0, 100)}{m.text.length > 100 ? '...' : ''}</p>
+                      {visualComp}
+                    </>
+                  ) : (
+                    <div className="si" style={{ padding: "10px 14px", background: T.white, border: "1px solid " + T.g[100], borderRadius: "3px 14px 14px 14px", fontSize: 13, lineHeight: 1.6, color: T.g[700], boxShadow: T.sh.s, whiteSpace: "pre-line" }}>
+                      {m.text.split('**').map((part, i) => i % 2 === 1 ? <strong key={i}>{part}</strong> : part)}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
         {loading && <div style={{ display: "flex", gap: 5, padding: "10px 14px", background: T.white, borderRadius: "3px 14px 14px 14px", border: "1px solid " + T.g[100], maxWidth: 70, boxShadow: T.sh.s }}>{[0,1,2].map(i => <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: T.g[300], animation: "pulse 1.2s " + (i*.2) + "s ease-in-out infinite" }} />)}</div>}
         {done && <div className="si" style={{ textAlign: "center", padding: 16 }}><div style={{ width: 48, height: 48, borderRadius: "50%", background: T.greenLt, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 8px", fontSize: 22 }}>✓</div><p style={{ fontSize: 13, fontWeight: 700, color: T.green }}>{mealSteps ? "All meals planned!" : "Order ready!"}</p></div>}
         <div ref={endRef} />
@@ -371,8 +636,8 @@ const FinalCart = ({ data }) => {
       <div style={{ background: "linear-gradient(150deg, " + T.dark + ", " + T.charcoal + ")", padding: "20px 20px 44px", borderRadius: "0 0 24px 24px" }}>
         <JourneyTracker steps={STEPS} current={5} />
         <div style={{ marginTop: 14, display: "flex", justifyContent: "space-between" }}>
-          <div><p style={{ fontSize: 10, color: T.g[400], textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700, marginBottom: 3 }}>Weekly Total</p><span style={{ fontSize: 28, fontWeight: 800, color: "#fff", fontFamily: "'JetBrains Mono'" }}>{"₹" + total.toLocaleString()}</span></div>
-          <div style={{ textAlign: "right" }}><p style={{ fontSize: 10, color: T.g[400], textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700, marginBottom: 3 }}>Per Day</p><span style={{ fontSize: 28, fontWeight: 800, color: T.green, fontFamily: "'JetBrains Mono'" }}>{"₹" + perDay}</span></div>
+          <div><p style={{ fontSize: 10, color: T.g[400], textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700, marginBottom: 3 }}>Weekly Total</p><span style={{ fontSize: 28, fontWeight: 800, color: "#fff", fontFamily: mono }}>{"₹" + total.toLocaleString()}</span></div>
+          <div style={{ textAlign: "right" }}><p style={{ fontSize: 10, color: T.g[400], textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700, marginBottom: 3 }}>Per Day</p><span style={{ fontSize: 28, fontWeight: 800, color: T.green, fontFamily: mono }}>{"₹" + perDay}</span></div>
         </div>
       </div>
       <div style={{ padding: "0 14px", marginTop: -22 }}>
@@ -385,7 +650,7 @@ const FinalCart = ({ data }) => {
               <h4 style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 2, lineHeight: 1.3 }}>{item.product_name}</h4>
               <p style={{ fontSize: 11, color: T.g[500], marginBottom: 5 }}>{item.pack_size_label + " x " + item.packs_needed}</p>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 16, fontWeight: 800, color: T.brand, fontFamily: "'JetBrains Mono'" }}>{"₹" + item.total_price}</span>
+                <span style={{ fontSize: 16, fontWeight: 800, color: T.brand, fontFamily: mono }}>{"₹" + item.total_price}</span>
                 {item.product_page_url && <a href={item.product_page_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, fontWeight: 700, color: T.brand, textDecoration: "none", padding: "2px 8px", borderRadius: T.r.full, background: T.brandLt }}>View on Licious</a>}
               </div>
             </div>
