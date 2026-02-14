@@ -676,15 +676,19 @@ const CutChips = ({ data, onSelect }) => {
 const ProductCardGrid = ({ data, onSelect }) => {
   const [selected, setSelected] = useState([]);
   const [submitted, setSubmitted] = useState(false);
-  const mealTarget = data.protein_target || 50;
+  
+  // Defensive: handle alternate field names from backend
+  const mealLabel = data.meal_label || data.meal || "Meal";
+  const mealTarget = data.protein_target || data.target || 50;
+  const rawProducts = data.products || data.items || [];
   
   // Filter out products with price 0 (already purchased)
-  const selectableProducts = (data.products || []).filter(p => p.price > 0);
-  const alreadyOrderedProducts = (data.products || []).filter(p => p.price === 0);
+  const selectableProducts = rawProducts.filter(p => (p.price || 0) > 0);
+  const alreadyOrderedProducts = rawProducts.filter(p => (p.price || 0) === 0);
   
   // Group selectable products by category
   const productsByCategory = selectableProducts.reduce((acc, p) => {
-    const cat = p.category || 'other';
+    const cat = p.category || p.source || 'other';
     if (!acc[cat]) acc[cat] = [];
     acc[cat].push(p);
     return acc;
@@ -692,24 +696,24 @@ const ProductCardGrid = ({ data, onSelect }) => {
   
   // Calculate rough protein estimate
   const totalSelectedProtein = selected.reduce((sum, productName) => {
-    const product = selectableProducts.find(p => p.product_name === productName);
+    const product = selectableProducts.find(p => (p.product_name || p.name) === productName);
     if (!product) return sum;
-    if (product.category === 'eggs') return sum + 6.5 * 4; // rough: 4 eggs
-    return sum + (product.protein_per_100g || 20) * 1.2; // rough: 120g portion
+    if ((product.category || product.source) === 'eggs') return sum + 6.5 * 4;
+    return sum + (product.protein_per_100g || 20) * 1.2;
   }, 0);
   
   const canSelectMore = totalSelectedProtein < mealTarget * 1.3;
   
   // Get selected sources for reminder
-  const selectedSources = [...new Set(selectableProducts.filter(p => selected.includes(p.product_name)).map(p => p.category))];
-  const allSources = [...new Set(selectableProducts.map(p => p.category))];
+  const selectedSources = [...new Set(selectableProducts.filter(p => selected.includes(p.product_name || p.name)).map(p => p.category || p.source))];
+  const allSources = [...new Set(selectableProducts.map(p => p.category || p.source))];
   const sourcesWithoutSelection = allSources.filter(s => !selectedSources.includes(s));
   
   // Handle product selection with SWAP logic (max 1 per category)
   const handleProductSelect = (product) => {
     if (submitted) return;
-    const productName = product.product_name;
-    const category = product.category || 'other';
+    const productName = product.product_name || product.name;
+    const category = product.category || product.source || 'other';
     
     setSelected(prev => {
       const isSelected = prev.includes(productName);
