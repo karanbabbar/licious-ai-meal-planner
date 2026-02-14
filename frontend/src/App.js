@@ -529,13 +529,44 @@ const CutChips = ({ data, onSelect }) => {
 
 const ProductCardGrid = ({ data, onSelect }) => {
   const [selected, setSelected] = useState([]);
+  const mealTarget = data.protein_target || 50;
+  
+  // Calculate rough protein estimate
+  const totalSelectedProtein = selected.reduce((sum, productName) => {
+    const product = (data.products || []).find(p => p.product_name === productName);
+    if (!product) return sum;
+    if (product.category === 'eggs') return sum + 6.5 * 4; // rough: 4 eggs
+    return sum + (product.protein_per_100g || 20) * 1.2; // rough: 120g portion
+  }, 0);
+  
+  const canSelectMore = totalSelectedProtein < mealTarget * 1.3;
+  
+  // Get selected sources for reminder
+  const selectedSources = [...new Set((data.products || []).filter(p => selected.includes(p.product_name)).map(p => p.category))];
+  const allSources = [...new Set((data.products || []).map(p => p.category))];
+  const sourcesWithoutSelection = allSources.filter(s => !selectedSources.includes(s));
   
   return (
     <div className="si" style={{ marginTop: 8 }}>
       <p style={{ fontSize: 12, color: T.g[400], marginBottom: 10 }}>Tap to select products</p>
+      
+      {!canSelectMore && (
+        <div style={{ padding: "10px 14px", background: T.amberLt, border: "1px solid " + T.amber, borderRadius: 12, marginBottom: 8, fontSize: 12, color: T.amber, fontWeight: 600 }}>
+          ⚠️ Selected products may exceed your {mealTarget}g target. You can adjust portions in the next step.
+        </div>
+      )}
+      
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
         {(data.products || []).map((p, i) => {
           const isSelected = selected.includes(p.product_name);
+          
+          // Determine protein display
+          const proteinDisplay = p.category === 'eggs'
+            ? '6.5g/egg'
+            : p.protein_per_100g 
+              ? `${p.protein_per_100g}g/100g` 
+              : '';
+          
           return (
             <button key={i} onClick={() => setSelected(prev => isSelected ? prev.filter(n => n !== p.product_name) : [...prev, p.product_name])} style={{
               padding: 8, borderRadius: 14, border: "2px solid " + (isSelected ? T.brand : T.g[200]),
@@ -553,15 +584,24 @@ const ProductCardGrid = ({ data, onSelect }) => {
               <p style={{ fontSize: 11, fontWeight: 700, color: T.dark, lineHeight: 1.3, marginBottom: 4, minHeight: 28 }}>{p.product_name}</p>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontSize: 14, fontWeight: 800, color: T.brand, fontFamily: mono }}>₹{p.price}</span>
-                <span style={{ fontSize: 9, fontWeight: 700, color: T.green, background: T.greenLt, padding: "2px 6px", borderRadius: 99 }}>
-                  {p.protein_per_100g}g/100g
-                </span>
+                {proteinDisplay && (
+                  <span style={{ fontSize: 9, fontWeight: 700, color: T.green, background: T.greenLt, padding: "2px 6px", borderRadius: 99 }}>
+                    {proteinDisplay}
+                  </span>
+                )}
               </div>
               <p style={{ fontSize: 10, color: T.g[400], marginTop: 3 }}>{p.pack_size_label}</p>
             </button>
           );
         })}
       </div>
+      
+      {sourcesWithoutSelection.length > 0 && selected.length > 0 && (
+        <div style={{ padding: "8px 12px", background: T.blueLt, borderRadius: 10, fontSize: 12, color: T.blue, marginTop: 8 }}>
+          💡 Don't forget to pick a {sourcesWithoutSelection.join(" and ")} product too!
+        </div>
+      )}
+      
       <Btn onClick={() => onSelect(selected.join(", "))} full disabled={selected.length === 0} style={{ marginTop: 16 }}>
         Select These →
       </Btn>
