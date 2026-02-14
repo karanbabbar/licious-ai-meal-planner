@@ -789,6 +789,8 @@ const MealPlanningWizard = ({ sessionId, onComplete, onRestart }) => {
   const [msgs, setMsgs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [error, setError] = useState(null);
+  const [lastMessage, setLastMessage] = useState(null);
   const hasSent = useRef(false);
 
   useEffect(() => {
@@ -803,11 +805,19 @@ const MealPlanningWizard = ({ sessionId, onComplete, onRestart }) => {
     const msgText = typeof message === 'string' ? message : (typeof message === 'object' ? JSON.stringify(message) : String(message));
     if (!msgText.trim()) return;
     
+    setLastMessage(msgText.trim());
+    setError(null);
     setMsgs(p => [...p, { role: "user", text: msgText.trim() }]);
     setLoading(true);
     try {
       const res = await fetch(ENDPOINTS.mealPlanning, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sessionId, message: msgText.trim() }) });
       const raw = await res.text();
+      
+      // Check for empty response
+      if (!raw || raw.trim() === '') {
+        throw new Error('Empty response from server');
+      }
+      
       let data;
       try {
         const cleaned = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
@@ -820,10 +830,21 @@ const MealPlanningWizard = ({ sessionId, onComplete, onRestart }) => {
         setDone(true);
         setTimeout(() => onComplete(data), 1500);
       }
-    } catch {
-      setMsgs(p => [...p, { role: "bot", text: "Something went wrong. Try again." }]);
+    } catch (err) {
+      console.error('API Error:', err);
+      setError(true);
+      // Remove the user message that failed
+      setMsgs(p => p.slice(0, -1));
     }
     setLoading(false);
+  };
+  
+  const handleRetry = () => {
+    if (lastMessage) {
+      send(lastMessage);
+    } else {
+      send("Start planning my protein sources");
+    }
   };
 
   const renderUI = (msg) => {
