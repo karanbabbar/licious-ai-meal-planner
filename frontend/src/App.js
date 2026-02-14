@@ -1335,7 +1335,8 @@ const MealPlanningWizard = ({ sessionId, onComplete, onRestart }) => {
   useEffect(() => {
     if (!hasSent.current) {
       hasSent.current = true;
-      send("Start planning my protein sources");
+      // Send structured JSON to trigger the meal planning flow
+      send({ message: "start" });
     }
   }, []);
 
