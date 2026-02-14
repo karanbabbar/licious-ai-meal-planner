@@ -59,6 +59,7 @@ Build a React mobile-first web app called "Protein Planner v2" - a guided wizard
 4. **P2 - Select button** - Disabled after submission with loading state
 5. **P2 - Floating-point** - All protein displays use Math.round(value * 10) / 10
 6. **P2 - Lock Meal button** - Disabled after submission with loading state
+7. **Retry mechanism** - ErrorRetry component shows "Something went wrong. Tap to retry" on API failures
 
 ---
 
