@@ -1143,22 +1143,31 @@ const MealPlanningWizard = ({ sessionId, onComplete, onRestart }) => {
     }
   }, []);
 
-  // FIX 6: Safe send function that handles ALL input types
+  // Send function that handles both string and JSON payloads
   const send = async (input) => {
-    let text = '';
-    if (typeof input === 'string') text = input;
-    else if (typeof input === 'object' && input !== null) text = JSON.stringify(input);
-    else text = String(input || '');
+    // Prepare the message payload
+    let messagePayload;
+    if (typeof input === 'string') {
+      messagePayload = input.trim();
+    } else if (typeof input === 'object' && input !== null) {
+      messagePayload = input; // Send object directly as message
+    } else {
+      messagePayload = String(input || '').trim();
+    }
     
-    text = text.trim();
-    if (!text) return;
+    if (!messagePayload || (typeof messagePayload === 'string' && !messagePayload)) return;
     
-    setLastMessage(text);
+    const displayText = typeof messagePayload === 'object' ? JSON.stringify(messagePayload) : messagePayload;
+    setLastMessage(messagePayload);
     setError(null);
-    setMsgs(p => [...p, { role: "user", text }]);
+    setMsgs(p => [...p, { role: "user", text: displayText }]);
     setLoading(true);
     try {
-      const res = await fetch(ENDPOINTS.mealPlanning, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sessionId, message: text }) });
+      const res = await fetch(ENDPOINTS.mealPlanning, { 
+        method: "POST", 
+        headers: { "Content-Type": "application/json" }, 
+        body: JSON.stringify({ session_id: sessionId, message: messagePayload }) 
+      });
       const raw = await res.text();
       
       // Check for empty response
@@ -1174,8 +1183,11 @@ const MealPlanningWizard = ({ sessionId, onComplete, onRestart }) => {
         data = { message: raw };
       }
       setMsgs(p => [...p, { role: "bot", text: data.message || raw, data }]);
-      if (data.stage_complete) {
+      
+      // Check for order_confirmed ui_type - this marks the end of the flow
+      if (data.ui_type === 'order_confirmed') {
         setDone(true);
+        // Pass the full order data to parent
         setTimeout(() => onComplete(data), 1500);
       }
     } catch (err) {
