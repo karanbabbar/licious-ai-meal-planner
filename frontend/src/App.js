@@ -75,6 +75,51 @@ const TextInput = ({ value, onChange, label, placeholder }) => (
   </div>
 );
 
+// FIX 1: FormattedText component to render markdown-style bold text
+const FormattedText = ({ text }) => {
+  if (!text) return null;
+  // Replace **bold** with actual bold spans
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  return (
+    <p style={{ fontSize: 13, color: T.g[700], lineHeight: 1.6 }}>
+      {parts.map((part, i) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          return <strong key={i} style={{ fontWeight: 700, color: T.dark }}>{part.slice(2, -2)}</strong>;
+        }
+        return part;
+      })}
+    </p>
+  );
+};
+
+// FIX 1: Chat input for text fallback when no ui_type
+const ChatInput = ({ onSend, disabled }) => {
+  const [input, setInput] = useState("");
+  
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!input.trim() || disabled) return;
+    onSend(input.trim());
+    setInput("");
+  };
+  
+  return (
+    <form onSubmit={handleSubmit} style={{ display: "flex", gap: 8, marginTop: 12 }}>
+      <input
+        type="text"
+        value={input}
+        onChange={e => setInput(e.target.value)}
+        placeholder="Type your response..."
+        disabled={disabled}
+        style={{ flex: 1, padding: "12px 14px", border: "2px solid " + T.g[200], borderRadius: T.r.m, fontSize: 14, fontWeight: 500, background: T.white, color: T.dark, opacity: disabled ? 0.5 : 1 }}
+      />
+      <button type="submit" disabled={!input.trim() || disabled} style={{ padding: "12px 20px", borderRadius: T.r.m, border: "none", background: input.trim() && !disabled ? T.brand : T.g[200], color: input.trim() && !disabled ? "#fff" : T.g[400], fontWeight: 700, cursor: input.trim() && !disabled ? "pointer" : "not-allowed", transition: "all .2s" }}>
+        Send
+      </button>
+    </form>
+  );
+};
+
 const RankingUI = ({ value, onChange }) => {
   const defaults = ["Chicken", "Eggs", "Fish", "Mutton"];
   const icons = { Chicken: "🍗", Eggs: "🥚", Fish: "🐟", Mutton: "🥩" };
