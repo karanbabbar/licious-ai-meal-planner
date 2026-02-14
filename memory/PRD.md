@@ -63,6 +63,22 @@ The frontend sends structured JSON instead of plain text for backend reliability
 - Final cart summary screen
 - Journey tracker (progress indicator)
 
+### Merged Agent 2+3 Flow Update (Dec 2025) ✅
+The /v2/weekly-cart endpoint was removed. Everything now flows through /v2/meal-planning:
+1. **Removed WeeklyOrderWizard** component (no longer needed)
+2. **Added 3 new ui_type components:**
+   - `WeeklySummary` - Shows 7-day plan + cart preview
+   - `TimeSlotSelect` - Choose delivery time slot
+   - `OrderConfirmed` - Final order confirmation screen
+3. **Changed all selections to JSON format:**
+   - Distribution: `{"distribution": "Equal", "supplement_grams": 0}`
+   - Sources: `{"sources": ["eggs", "chicken"]}`
+   - Cut: `{"cut": "Boneless"}`
+   - Products: `{"products": ["Chicken Breast Boneless 450g"]}`
+   - Utilization: `{"utilization": {...}}`
+   - Time slot: `{"time_slot": "morning"}`
+4. **Flow completion:** When `order_confirmed` ui_type is received, transitions to FinalCart
+
 ### Bug Fixes - Comprehensive Defensive Programming Audit (Dec 2025) ✅
 **P0 CRITICAL - All `.map()` crashes fixed with Array.isArray() guards:**
 1. **PillSelect** (Line 51) - Guard on options.map()
