@@ -72,6 +72,15 @@ Build a React mobile-first web app called "Protein Planner v2" - a guided wizard
 4. **CTAs not disabling** - Added isSubmitting state to: DistributionSetup, SourceChips, CutChips, DeliverySelect, WeeklyPlanReview, CartPreview
 5. **Distribution fallback calc** - Helper function calculates Equal/Heavy Breakfast/Lunch/Dinner splits locally
 
+### Bug Fixes - Complete Fix Round (Dec 2025) ✅
+1. **FIX 1 (CRITICAL) - Text input fallback** - Added FormattedText and ChatInput components. When backend returns no ui_type, shows formatted message + text input so user can always respond
+2. **FIX 2 - Defensive data parsing** - All components handle alternate field names (meal/meal_label, sources/available_sources, cuts/cut_options, etc.)
+3. **FIX 3 - Protein badge on cards** - Already implemented with 6.5g/egg and Xg/100g displays
+4. **FIX 4 - Distribution badge stale values** - CollapsedBadge now accepts msgs array to find latest confirmed budget from subsequent messages
+5. **FIX 5 - Edit button on meal badges** - MealBadge now has optional "Edit" link to change locked meal
+6. **FIX 6 - send() safety** - All send functions now safely handle string, object, or other input types
+7. **FIX 7 - CTA disable after click** - All interactive components have isSubmitting/locked state with loading indicators
+
 ---
 
 ## Prioritized Backlog
