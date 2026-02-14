@@ -675,18 +675,18 @@ const SourceChips = ({ data, onSelect }) => {
       <p style={{ fontSize: 11, color: T.g[400], marginBottom: 4 }}>{proteinTarget}g protein target</p>
       <p style={{ fontSize: 12, color: T.g[400], marginBottom: 12 }}>Choose up to 3 sources for this meal</p>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-        {sources.map(s => {
-          const isSelected = selected.includes(s.name);
+        {(Array.isArray(sources) ? sources : []).map((s, idx) => {
+          const isSelected = selected.includes(s?.name);
           const canSelect = selected.length < maxSources || isSelected;
           return (
             <button 
-              key={s.name} 
+              key={(s?.name || idx) + idx} 
               onClick={() => {
                 if (isSubmitting) return;
                 if (isSelected) {
-                  setSelected(prev => prev.filter(n => n !== s.name));
+                  setSelected(prev => prev.filter(n => n !== s?.name));
                 } else if (canSelect) {
-                  setSelected(prev => [...prev, s.name]);
+                  setSelected(prev => [...prev, s?.name]);
                 }
               }}
               disabled={(!canSelect && !isSelected) || isSubmitting}
@@ -702,8 +702,8 @@ const SourceChips = ({ data, onSelect }) => {
                 opacity: ((!canSelect && !isSelected) || isSubmitting) ? 0.5 : 1
               }}
             >
-              {s.icon && <span style={{ fontSize: 18 }}>{s.icon}</span>}
-              {s.name}
+              {s?.icon && <span style={{ fontSize: 18 }}>{s.icon}</span>}
+              {s?.name || 'Unknown'}
               {isSelected && "  ✓"}
             </button>
           );
