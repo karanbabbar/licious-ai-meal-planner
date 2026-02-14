@@ -860,7 +860,8 @@ const ProductCardGrid = ({ data, onSelect }) => {
   const handleSubmit = () => {
     if (selected.length === 0 || submitted) return;
     setSubmitted(true);
-    onSelect(selected.join(", "));
+    // Send structured JSON instead of text
+    onSelect({ products: selected });
   };
   
   // Render products grouped by category with "Pick 1" label
