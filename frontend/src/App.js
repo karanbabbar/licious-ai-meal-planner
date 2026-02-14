@@ -963,19 +963,37 @@ const PortionConfirmCard = ({ data, onConfirm }) => {
   const [utilization, setUtilization] = useState({});
   const [locked, setLocked] = useState(false);
   
-  // Defensive: handle alternate field names from backend
-  const mealLabel = data.meal_label || data.meal || "Meal";
-  const proteinTarget = data.protein_target || data.target || 50;
-  const portions = data.portions || data.items || [];
-  const utilizationOptions = data.utilization_options || data.leftover_options || [];
+  // DEFENSIVE: handle alternate field names from backend with safe defaults
+  const mealLabel = data?.meal_label || data?.meal || "Meal";
+  const proteinTarget = data?.protein_target || data?.target || 50;
   
-  const total = Math.round(portions.reduce((s, p) => s + (p.protein_g || p.protein || 0), 0) * 10) / 10;
+  // DEFENSIVE: Ensure portions is always an array
+  let portions = data?.portions || data?.items || [];
+  if (!Array.isArray(portions)) {
+    if (typeof portions === 'object' && portions !== null) {
+      portions = Object.values(portions);
+    } else {
+      portions = [];
+    }
+  }
+  
+  // DEFENSIVE: Ensure utilizationOptions is always an array
+  let utilizationOptions = data?.utilization_options || data?.leftover_options || [];
+  if (!Array.isArray(utilizationOptions)) {
+    if (typeof utilizationOptions === 'object' && utilizationOptions !== null) {
+      utilizationOptions = Object.values(utilizationOptions);
+    } else {
+      utilizationOptions = [];
+    }
+  }
+  
+  const total = Math.round((Array.isArray(portions) ? portions : []).reduce((s, p) => s + (p?.protein_g || p?.protein || 0), 0) * 10) / 10;
   
   const handleConfirm = () => {
     if (locked) return;
     setLocked(true);
     // Convert utilization object to message string
-    const utilizationMsg = Object.entries(utilization).map(([product, choice]) => `${product}: ${choice}`).join(", ");
+    const utilizationMsg = Object.entries(utilization || {}).map(([product, choice]) => `${product}: ${choice}`).join(", ");
     const msg = `Lock ${mealLabel}, utilization: ${utilizationMsg}`;
     onConfirm(msg);
   };
