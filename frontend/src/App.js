@@ -1301,6 +1301,19 @@ export default function App() {
     setUserData({ daily_calories: calories, daily_protein_g: protein });
     setScreen("meals");
   };
+  
+  // Handler for when Agent 2 (Meal Planning) completes
+  const handleMealPlanningComplete = (data) => {
+    // Agent 2 done → move to Agent 3 (Weekly Order)
+    setScreen("weekly");
+  };
+  
+  // Handler for when Agent 3 (Weekly Order) completes
+  const handleWeeklyOrderComplete = (data) => {
+    // Agent 3 done → show Final Cart with Agent 3's data
+    setCartData(data);
+    setScreen("cart");
+  };
 
   return (
     <>
@@ -1311,7 +1324,8 @@ export default function App() {
         {screen === "calculator_disclaimer" && <CalculatorDisclaimer onStart={() => setScreen("onboarding")} onRestart={handleRestart} />}
         {screen === "onboarding" && <Onboarding sessionId={sessionId} onComplete={d => { setUserData(d); setScreen("results"); }} onRestart={handleRestart} />}
         {screen === "results" && <Results data={userData} onContinue={() => setScreen("meals")} />}
-        {screen === "meals" && <MealPlanningWizard sessionId={sessionId} onComplete={() => setScreen("cart")} onRestart={handleRestart} />}
+        {screen === "meals" && <MealPlanningWizard sessionId={sessionId} onComplete={handleMealPlanningComplete} onRestart={handleRestart} />}
+        {screen === "weekly" && <WeeklyOrderWizard sessionId={sessionId} onComplete={handleWeeklyOrderComplete} onRestart={handleRestart} />}
         {screen === "cart" && <FinalCart data={cartData} />}
       </Shell>
     </>
