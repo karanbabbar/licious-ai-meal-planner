@@ -427,8 +427,16 @@ const DistributionSetup = ({ data, onSelect }) => {
           const values = [d.breakfast || 0, d.lunch || 0, d.dinner || 0];
           const isSelected = sel === d.label;
           
+          const handleSelect = () => {
+            setSel(d.label);
+            const msg = supplement && supplementGrams 
+              ? `I take ${supplementGrams}g of supplement protein daily, ${d.label}, confirm`
+              : `No supplements, ${d.label}, confirm`;
+            onSelect(msg);
+          };
+          
           return (
-            <button key={d.label} onClick={() => { setSel(d.label); onSelect("No supplements, " + d.label + ", confirm"); }} style={{
+            <button key={d.label} onClick={handleSelect} style={{
               display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 14,
               border: "2px solid " + (isSelected ? T.brand : T.g[200]), background: isSelected ? T.brandLt : T.white,
               cursor: "pointer", textAlign: "left",
