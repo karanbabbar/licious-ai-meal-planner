@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const API_BASE = "https://karanbabbar.app.n8n.cloud/webhook";
 const ENDPOINTS = {
@@ -74,7 +74,6 @@ const TextInput = ({ value, onChange, label, placeholder }) => (
     <input type="text" value={value || ""} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={{ width: "100%", padding: "12px 14px", border: "2px solid " + T.g[200], borderRadius: T.r.m, fontSize: 15, fontWeight: 500, background: T.white, color: T.dark }} />
   </div>
 );
-
 
 const RankingUI = ({ value, onChange }) => {
   const defaults = ["Chicken", "Eggs", "Fish", "Mutton"];
@@ -165,6 +164,90 @@ const Homepage = ({ onStart }) => (
   </div>
 );
 
+// NEW: MACRO FORK SCREEN
+const MacroFork = ({ onKnowIt, onCalculate, onRestart }) => {
+  const [calories, setCalories] = useState("");
+  const [protein, setProtein] = useState("");
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: T.white }}>
+      <div style={{ padding: "12px 20px", display: "flex", alignItems: "center", gap: 10, borderBottom: "1px solid " + T.g[100] }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: T.brand, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#fff", fontSize: 14, fontWeight: 800 }}>P</span></div>
+            <span style={{ fontSize: 14, fontWeight: 800, color: T.dark }}>Protein Planner</span>
+          </div>
+        </div>
+        <span style={{ fontSize: 10, fontWeight: 700, color: T.brand, padding: "3px 8px", background: T.brandLt, borderRadius: T.r.full }}>by Licious</span>
+        <button onClick={onRestart} style={{ width: 32, height: 32, borderRadius: T.r.m, border: "1px solid " + T.g[200], background: T.white, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, color: T.g[400] }} title="Start over">✕</button>
+      </div>
+      
+      <div className="up" style={{ flex: 1, padding: "28px 24px" }}>
+        <h2 style={{ fontSize: 22, fontWeight: 800, color: T.dark, marginBottom: 6, letterSpacing: "-0.02em" }}>Let's plan your protein</h2>
+        <p style={{ fontSize: 13, color: T.g[500], marginBottom: 24, lineHeight: 1.5 }}>Do you know your daily calorie and protein requirements?</p>
+        
+        <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 24 }}>
+          <NumberInput label="Daily calorie intake" value={calories} onChange={setCalories} unit="kcal" placeholder="e.g. 2500" />
+          <NumberInput label="Daily protein from food" value={protein} onChange={setProtein} unit="g" placeholder="e.g. 150" />
+          <div style={{ display: "flex", gap: 6, padding: "10px 12px", background: T.blueLt, borderRadius: T.r.m, border: "1px solid " + T.blue + "20" }}>
+            <span style={{ fontSize: 16, flexShrink: 0 }}>💡</span>
+            <p style={{ fontSize: 11, color: T.g[600], lineHeight: 1.4 }}>If you take protein supplements, deduct that amount. Enter only protein you need from food.</p>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ padding: "16px 24px 32px", display: "flex", flexDirection: "column", gap: 10 }}>
+        <Btn onClick={() => onKnowIt(calories, protein)} full disabled={!calories || !protein} style={{ fontSize: 16 }}>
+          Yes, I know it! <span style={{ fontSize: 18 }}>→</span>
+        </Btn>
+        <Btn onClick={() => onCalculate(calories, protein)} v="secondary" full style={{ fontSize: 15 }}>
+          Help me calculate 🧮
+        </Btn>
+      </div>
+    </div>
+  );
+};
+
+// NEW: CALCULATOR DISCLAIMER SCREEN
+const CalculatorDisclaimer = ({ onStart, onRestart }) => {
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: T.white }}>
+      <div style={{ padding: "12px 20px", display: "flex", alignItems: "center", gap: 10, borderBottom: "1px solid " + T.g[100] }}>
+        <div style={{ flex: 1 }}><div style={{ fontSize: 14, fontWeight: 700, color: T.dark }}>Calculator</div></div>
+        <button onClick={onRestart} style={{ width: 32, height: 32, borderRadius: T.r.m, border: "1px solid " + T.g[200], background: T.white, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, color: T.g[400] }} title="Start over">✕</button>
+      </div>
+
+      <div className="up" style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 24px" }}>
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <div style={{ width: 64, height: 64, borderRadius: "50%", background: T.brandLt, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontSize: 32 }}>🧮</div>
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: T.dark, marginBottom: 8, letterSpacing: "-0.02em" }}>Quick health calculator</h2>
+          <p style={{ fontSize: 13, color: T.g[500], lineHeight: 1.6, maxWidth: 300, margin: "0 auto" }}>We'll ask you a few questions about your body, activity level, and goals to calculate your personalised daily macros.</p>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 32 }}>
+          {[
+            { icon: "📏", label: "Basic measurements (height, weight, age)" },
+            { icon: "🎯", label: "Your fitness goal" },
+            { icon: "🏃", label: "Activity level" },
+            { icon: "🍗", label: "Protein preferences" }
+          ].map((item, i) => (
+            <div key={i} style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 14px", background: T.g[50], borderRadius: T.r.m, border: "1px solid " + T.g[200] }}>
+              <span style={{ fontSize: 20 }}>{item.icon}</span>
+              <span style={{ fontSize: 13, fontWeight: 500, color: T.dark }}>{item.label}</span>
+            </div>
+          ))}
+        </div>
+
+        <p style={{ textAlign: "center", fontSize: 11, color: T.g[400], marginBottom: 8 }}>Takes about 2 minutes</p>
+      </div>
+
+      <div style={{ padding: "16px 24px 32px" }}>
+        <Btn onClick={onStart} full style={{ fontSize: 16, padding: "16px" }}>Let's go <span style={{ fontSize: 18 }}>→</span></Btn>
+      </div>
+    </div>
+  );
+};
+
 const Onboarding = ({ sessionId, onComplete, onRestart }) => {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -207,22 +290,11 @@ const Onboarding = ({ sessionId, onComplete, onRestart }) => {
     { title: "How active are you?", sub: "This affects how many calories you burn daily", ok: form.activity, go: () => sendMsg("My activity level is " + form.activity), ui: (
       <PillSelect options={[{ label: "Sedentary", value: "Sedentary", icon: "🪑" }, { label: "Light", value: "Light", icon: "🚶" }, { label: "Moderate", value: "Moderate", icon: "🏃" }, { label: "Active", value: "Active", icon: "⚡" }, { label: "Very Active", value: "Very Active", icon: "🔥" }]} value={form.activity} onChange={v => f("activity", v)} />
     )},
-    { title: "Rank your protein preferences", sub: "Drag to reorder — your top pick gets priority", ok: (form.preferences || []).length === 4, go: () => sendMsg("My protein preference ranking: 1. " + form.preferences[0] + ", 2. " + form.preferences[1] + ", 3. " + form.preferences[2] + ", 4. " + form.preferences[3]), ui: (
+    { title: "Rank your protein preferences", sub: "Use arrows to reorder — your top pick gets priority", ok: (form.preferences || []).length === 4, go: () => sendMsg("My protein preference ranking: 1. " + form.preferences[0] + ", 2. " + form.preferences[1] + ", 3. " + form.preferences[2] + ", 4. " + form.preferences[3]), ui: (
       <RankingUI value={form.preferences} onChange={v => f("preferences", v)} />
     )},
     { title: "Meals per day", sub: "We'll distribute protein across each meal", ok: form.meals, go: () => sendMsg(form.meals + " meals per day"), ui: (
       <PillSelect options={[{ label: "2 meals", value: 2 }, { label: "3 meals", value: 3 }, { label: "4 meals", value: 4 }]} value={form.meals} onChange={v => f("meals", v)} />
-    )},
-    { title: "Do you know your daily protein needs?", sub: "If you already track macros, you can enter them directly", ok: form.knowsMacros !== undefined && form.knowsMacros !== "", go: () => { if (form.knowsMacros === "yes") { return sendMsg("I know my macros. Daily protein: " + (form.manualProtein || 150) + "g, daily calories: " + (form.manualCalories || 2500)); } else { return sendMsg(form.meals + " meals per day. Calculate my macros for me."); } }, ui: (
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <PillSelect options={[{ label: "Calculate for me", value: "no", icon: "🧮" }, { label: "I know my macros", value: "yes", icon: "✅" }]} value={form.knowsMacros} onChange={v => f("knowsMacros", v)} />
-        {form.knowsMacros === "yes" && (
-          <div className="si" style={{ display: "flex", flexDirection: "column", gap: 12, padding: 16, background: T.g[50], borderRadius: T.r.m, border: "1px solid " + T.g[200] }}>
-            <NumberInput label="Daily protein target" value={form.manualProtein} onChange={v => f("manualProtein", v)} unit="g" placeholder="150" />
-            <NumberInput label="Daily calorie target" value={form.manualCalories} onChange={v => f("manualCalories", v)} unit="kcal" placeholder="2500" />
-          </div>
-        )}
-      </div>
     )},
   ];
 
@@ -244,7 +316,7 @@ const Onboarding = ({ sessionId, onComplete, onRestart }) => {
         {cur.ui}
       </div>
       <div style={{ padding: "16px 24px 32px" }}>
-        <Btn onClick={handleNext} full disabled={!cur.ok} loading={loading}>{step === formSteps.length - 1 ? (form.knowsMacros === "yes" ? "Start Planning" : "Calculate My Macros") : "Continue"}{step < formSteps.length - 1 && <span>→</span>}</Btn>
+        <Btn onClick={handleNext} full disabled={!cur.ok} loading={loading}>Continue{step < formSteps.length - 1 && <span> →</span>}</Btn>
       </div>
     </div>
   );
@@ -283,148 +355,205 @@ const Results = ({ data, onContinue }) => {
   );
 };
 
-// ===== VISUAL MEAL PLANNING COMPONENTS =====
+// VISUAL MEAL PLANNING COMPONENTS (backend-driven)
 
-const DistributionPicker = ({ target, onSelect }) => {
-  const [sel, setSel] = useState("equal");
-  const dists = [
-    { id: "equal", label: "Equal", icon: "⚖️", vals: [Math.floor(target/3), Math.floor(target/3), target - 2*Math.floor(target/3)] },
-    { id: "heavy_bfast", label: "Heavy breakfast", icon: "🌅", vals: [Math.round(target*0.4), Math.round(target*0.3), target - Math.round(target*0.4) - Math.round(target*0.3)] },
-    { id: "heavy_dinner", label: "Heavy dinner", icon: "🌙", vals: [Math.round(target*0.3), Math.round(target*0.3), target - 2*Math.round(target*0.3)] },
-  ];
-  const colors = [T.brand, T.green, T.blue];
-  const meals = ["Bfast", "Lunch", "Dinner"];
-
+const DistributionSetup = ({ data, onSelect }) => {
+  const [sel, setSel] = useState(null);
+  const [supplement, setSupplement] = useState(false);
+  
   return (
     <div className="si" style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
-      <p style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 12 }}>How to split your {target}g protein?</p>
+      <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Do you take protein supplements?</p>
+      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+        <button onClick={() => setSupplement(false)} style={{ flex: 1, padding: "11px 14px", borderRadius: 12, border: "2px solid " + (!supplement ? T.brand : T.g[200]), background: !supplement ? T.brandLt : T.white, color: !supplement ? T.brand : T.g[600], fontSize: 13, fontWeight: !supplement ? 700 : 500, cursor: "pointer" }}>No supplements</button>
+        <button onClick={() => setSupplement(true)} style={{ flex: 1, padding: "11px 14px", borderRadius: 12, border: "2px solid " + (supplement ? T.brand : T.g[200]), background: supplement ? T.brandLt : T.white, color: supplement ? T.brand : T.g[600], fontSize: 13, fontWeight: supplement ? 700 : 500, cursor: "pointer" }}>Yes, I take</button>
+      </div>
+      
+      <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>How to split your {data.protein_target}g protein?</p>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        {dists.map(d => (
-          <button key={d.id} onClick={() => { setSel(d.id); onSelect && onSelect(d.id, d.label); }} style={{
-            display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 14,
-            border: "2px solid " + (sel === d.id ? T.brand : T.g[200]), background: sel === d.id ? T.brandLt : T.white,
-            cursor: "pointer", textAlign: "left",
-          }}>
-            <span style={{ fontSize: 22, flexShrink: 0 }}>{d.icon}</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: sel === d.id ? T.brand : T.dark, marginBottom: 6 }}>{d.label}</div>
-              <div style={{ display: "flex", gap: 2, height: 6 }}>
-                {d.vals.map((v, i) => (
-                  <div key={i} style={{ flex: v, height: "100%", borderRadius: 3, background: sel === d.id ? colors[i] : T.g[200], opacity: sel === d.id ? 1 : 0.5, transition: "all .3s" }} />
-                ))}
+        {(data.distributions || []).map(d => {
+          const colors = [T.brand, T.green, T.blue];
+          const meals = ["Bfast", "Lunch", "Dinner"];
+          const values = [d.breakfast || 0, d.lunch || 0, d.dinner || 0];
+          const isSelected = sel === d.label;
+          
+          return (
+            <button key={d.label} onClick={() => { setSel(d.label); onSelect("No supplements, " + d.label + ", confirm"); }} style={{
+              display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 14,
+              border: "2px solid " + (isSelected ? T.brand : T.g[200]), background: isSelected ? T.brandLt : T.white,
+              cursor: "pointer", textAlign: "left",
+            }}>
+              <span style={{ fontSize: 22, flexShrink: 0 }}>{d.icon}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: isSelected ? T.brand : T.dark, marginBottom: 6 }}>{d.label}</div>
+                <div style={{ display: "flex", gap: 2, height: 6 }}>
+                  {values.map((v, i) => (
+                    <div key={i} style={{ flex: v, height: "100%", borderRadius: 3, background: isSelected ? colors[i] : T.g[200], opacity: isSelected ? 1 : 0.5, transition: "all .3s" }} />
+                  ))}
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+                  {meals.map((m, i) => (
+                    <span key={m} style={{ fontSize: 10, color: isSelected ? colors[i] : T.g[400], fontWeight: 600 }}>{m} {values[i]}g</span>
+                  ))}
+                </div>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-                {meals.map((m, i) => (
-                  <span key={m} style={{ fontSize: 10, color: sel === d.id ? colors[i] : T.g[400], fontWeight: 600 }}>{m} {d.vals[i]}g</span>
-                ))}
+              {isSelected && <div style={{ width: 20, height: 20, borderRadius: "50%", background: T.brand, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><span style={{ color: "#fff", fontSize: 11 }}>✓</span></div>}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const SourceChips = ({ data, onSelect }) => {
+  const [selected, setSelected] = useState([]);
+  
+  return (
+    <div className="si" style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
+      <p style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 4 }}>{data.meal_label}</p>
+      <p style={{ fontSize: 11, color: T.g[400], marginBottom: 12 }}>{data.protein_target}g protein target</p>
+      <PillSelect 
+        options={(data.available_sources || []).map(s => ({ label: s.name, value: s.name, icon: s.icon }))}
+        value={selected}
+        onChange={setSelected}
+        multi={true}
+      />
+      <Btn onClick={() => onSelect(selected.join(" and "))} full disabled={selected.length === 0} style={{ marginTop: 16 }}>
+        Continue →
+      </Btn>
+    </div>
+  );
+};
+
+const CutChips = ({ data, onSelect }) => {
+  return (
+    <div className="si" style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
+      <p style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 12 }}>{data.category} cut preference</p>
+      <PillSelect 
+        options={(data.cuts || []).map(c => ({ label: c, value: c }))}
+        value={null}
+        onChange={onSelect}
+      />
+    </div>
+  );
+};
+
+const ProductCardGrid = ({ data, onSelect }) => {
+  const [selected, setSelected] = useState([]);
+  
+  return (
+    <div className="si" style={{ marginTop: 8 }}>
+      <p style={{ fontSize: 12, color: T.g[400], marginBottom: 10 }}>Tap to select products</p>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        {(data.products || []).map((p, i) => {
+          const isSelected = selected.includes(p.product_name);
+          return (
+            <button key={i} onClick={() => setSelected(prev => isSelected ? prev.filter(n => n !== p.product_name) : [...prev, p.product_name])} style={{
+              padding: 8, borderRadius: 14, border: "2px solid " + (isSelected ? T.brand : T.g[200]),
+              background: isSelected ? T.brandLt : T.white, cursor: "pointer", textAlign: "left",
+              boxShadow: isSelected ? "0 4px 12px " + T.brand + "15" : "0 1px 4px rgba(0,0,0,0.04)",
+            }}>
+              <div style={{ width: "100%", aspectRatio: "1", borderRadius: 10, background: T.g[100], overflow: "hidden", marginBottom: 8, position: "relative" }}>
+                {p.image_url ? <img src={p.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => e.target.style.display = "none"} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🥩</div>}
+                {isSelected && (
+                  <div style={{ position: "absolute", top: 6, right: 6, width: 22, height: 22, borderRadius: "50%", background: T.brand, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ color: "#fff", fontSize: 12, fontWeight: 800 }}>✓</span>
+                  </div>
+                )}
+              </div>
+              <p style={{ fontSize: 11, fontWeight: 700, color: T.dark, lineHeight: 1.3, marginBottom: 4, minHeight: 28 }}>{p.product_name}</p>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 14, fontWeight: 800, color: T.brand, fontFamily: mono }}>₹{p.price}</span>
+                <span style={{ fontSize: 9, fontWeight: 700, color: T.green, background: T.greenLt, padding: "2px 6px", borderRadius: 99 }}>
+                  {p.protein_per_100g}g/100g
+                </span>
+              </div>
+              <p style={{ fontSize: 10, color: T.g[400], marginTop: 3 }}>{p.pack_size_label}</p>
+            </button>
+          );
+        })}
+      </div>
+      <Btn onClick={() => onSelect(selected.join(", "))} full disabled={selected.length === 0} style={{ marginTop: 16 }}>
+        Select These →
+      </Btn>
+    </div>
+  );
+};
+
+const PortionConfirmCard = ({ data, onConfirm }) => {
+  const [utilization, setUtilization] = useState({});
+  const total = (data.portions || []).reduce((s, p) => s + p.protein_g, 0);
+  
+  return (
+    <div className="si">
+      {/* Portion Summary */}
+      <div style={{ padding: 14, background: T.white, borderRadius: 16, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <p style={{ fontSize: 13, fontWeight: 800, color: T.dark }}>{data.meal_label} portions</p>
+          <span style={{ fontSize: 11, fontWeight: 700, color: total >= data.protein_target ? T.green : T.amber, background: total >= data.protein_target ? T.greenLt : T.amberLt, padding: "3px 8px", borderRadius: 99 }}>
+            {total >= data.protein_target ? "✓ Target met" : total + "/" + data.protein_target + "g"}
+          </span>
+        </div>
+        {(data.portions || []).map((p, i) => (
+          <div key={i} style={{ marginBottom: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: T.dark }}>{p.product_name} ({p.quantity})</span>
+              <span style={{ fontSize: 13, fontWeight: 800, color: T.green, fontFamily: mono }}>{p.protein_g}g</span>
+            </div>
+            <div style={{ height: 5, background: T.g[100], borderRadius: 3, overflow: "hidden" }}>
+              <div style={{ height: "100%", width: Math.min(100, (p.protein_g / data.protein_target) * 100) + "%", background: "linear-gradient(90deg, " + T.green + ", #34D399)", borderRadius: 3, transition: "width .6s ease" }} />
+            </div>
+            <span style={{ fontSize: 10, color: T.g[400], marginTop: 2, display: "block" }}>from {p.pack_info}</span>
+          </div>
+        ))}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0 0", borderTop: "1px solid " + T.g[100], marginTop: 4 }}>
+          <span style={{ fontSize: 13, fontWeight: 800, color: T.dark }}>Total</span>
+          <span style={{ fontSize: 16, fontWeight: 800, color: T.green, fontFamily: mono }}>{total.toFixed(1)}g / {data.protein_target}g</span>
+        </div>
+      </div>
+
+      {/* Utilization Picker */}
+      {(data.utilization_options || []).length > 0 && (
+        <div style={{ padding: 14, background: T.white, borderRadius: 16, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 10 }}>
+          <p style={{ fontSize: 13, fontWeight: 800, color: T.dark, marginBottom: 4 }}>Pack utilization</p>
+          <p style={{ fontSize: 11, color: T.g[400], marginBottom: 12 }}>What to do with leftover portions?</p>
+          {data.utilization_options.map((item, idx) => (
+            <div key={idx} style={{ marginBottom: idx < data.utilization_options.length - 1 ? 16 : 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: T.dark }}>{item.product_name}</span>
+                <span style={{ fontSize: 10, fontWeight: 600, color: T.amber, background: T.amberLt, padding: "2px 6px", borderRadius: 99 }}>{item.remaining}</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                {(item.options || []).map((opt, i) => {
+                  const isActive = utilization[item.product_name] === opt.value;
+                  return (
+                    <button key={i} onClick={() => setUtilization(p => ({ ...p, [item.product_name]: opt.value }))} style={{
+                      display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10,
+                      border: "2px solid " + (isActive ? T.brand : T.g[200]), background: isActive ? T.brandLt : T.white,
+                      cursor: "pointer", textAlign: "left",
+                    }}>
+                      <div style={{ width: 18, height: 18, borderRadius: "50%", border: "2px solid " + (isActive ? T.brand : T.g[300]), display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        {isActive && <div style={{ width: 10, height: 10, borderRadius: "50%", background: T.brand }} />}
+                      </div>
+                      <span style={{ fontSize: 12, fontWeight: isActive ? 600 : 500, color: isActive ? T.brand : T.g[600] }}>{opt.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
-            {sel === d.id && <div style={{ width: 20, height: 20, borderRadius: "50%", background: T.brand, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><span style={{ color: "#fff", fontSize: 11 }}>✓</span></div>}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const ProductCard = ({ product, selected, onSelect }) => {
-  return (
-    <button onClick={onSelect} className="si" style={{
-      padding: 8, borderRadius: 14, border: "2px solid " + (selected ? T.brand : T.g[200]),
-      background: selected ? T.brandLt : T.white, cursor: "pointer", textAlign: "left",
-      boxShadow: selected ? "0 4px 12px " + T.brand + "15" : "0 1px 4px rgba(0,0,0,0.04)",
-    }}>
-      <div style={{ width: "100%", aspectRatio: "1", borderRadius: 10, background: T.g[100], overflow: "hidden", marginBottom: 8, position: "relative" }}>
-        {product.image_url ? <img src={product.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { e.target.style.display = "none"; }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🥩</div>}
-        {selected && (
-          <div style={{ position: "absolute", top: 6, right: 6, width: 22, height: 22, borderRadius: "50%", background: T.brand, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ color: "#fff", fontSize: 12, fontWeight: 800 }}>✓</span>
-          </div>
-        )}
-      </div>
-      <p style={{ fontSize: 11, fontWeight: 700, color: T.dark, lineHeight: 1.3, marginBottom: 4, minHeight: 28 }}>{product.name}</p>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: 14, fontWeight: 800, color: T.brand, fontFamily: mono }}>₹{product.price}</span>
-        <span style={{ fontSize: 9, fontWeight: 700, color: T.green, background: T.greenLt, padding: "2px 6px", borderRadius: 99 }}>
-          {product.protein}g{product.unit ? "/egg" : "/100g"}
-        </span>
-      </div>
-      <p style={{ fontSize: 10, color: T.g[400], marginTop: 3 }}>{product.pack_size}</p>
-    </button>
-  );
-};
-
-const PortionCard = ({ mealLabel, target, portions }) => {
-  const total = portions.reduce((s, p) => s + p.protein, 0);
-  return (
-    <div className="si" style={{ padding: 14, background: T.white, borderRadius: 16, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <p style={{ fontSize: 13, fontWeight: 800, color: T.dark }}>{mealLabel} portions</p>
-        <span style={{ fontSize: 11, fontWeight: 700, color: total >= target ? T.green : T.amber, background: total >= target ? T.greenLt : T.amberLt, padding: "3px 8px", borderRadius: 99 }}>
-          {total >= target ? "✓ Target met" : total + "/" + target + "g"}
-        </span>
-      </div>
-      {portions.map((p, i) => (
-        <div key={i} style={{ marginBottom: 10 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: T.dark }}>{p.name}</span>
-            <span style={{ fontSize: 13, fontWeight: 800, color: T.green, fontFamily: mono }}>{p.protein}g</span>
-          </div>
-          <div style={{ height: 5, background: T.g[100], borderRadius: 3, overflow: "hidden" }}>
-            <div style={{ height: "100%", width: Math.min(100, (p.protein / target) * 100) + "%", background: "linear-gradient(90deg, " + T.green + ", #34D399)", borderRadius: 3, transition: "width .6s ease" }} />
-          </div>
-          <span style={{ fontSize: 10, color: T.g[400], marginTop: 2, display: "block" }}>{p.quantity} from {p.pack}</span>
+          ))}
         </div>
-      ))}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0 0", borderTop: "1px solid " + T.g[100], marginTop: 4 }}>
-        <span style={{ fontSize: 13, fontWeight: 800, color: T.dark }}>Total</span>
-        <span style={{ fontSize: 16, fontWeight: 800, color: T.green, fontFamily: mono }}>{total.toFixed(1)}g / {target}g</span>
-      </div>
-    </div>
-  );
-};
-
-const UtilizationPicker = ({ items, onConfirm }) => {
-  const [sel, setSel] = useState({});
-  return (
-    <div className="si" style={{ padding: 14, background: T.white, borderRadius: 16, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
-      <p style={{ fontSize: 13, fontWeight: 800, color: T.dark, marginBottom: 4 }}>Pack utilization</p>
-      <p style={{ fontSize: 11, color: T.g[400], marginBottom: 12 }}>What to do with leftover portions?</p>
-      {items.map((item, idx) => (
-        <div key={idx} style={{ marginBottom: idx < items.length - 1 ? 16 : 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: T.dark }}>{item.name}</span>
-            <span style={{ fontSize: 10, fontWeight: 600, color: T.amber, background: T.amberLt, padding: "2px 6px", borderRadius: 99 }}>{item.remaining}</span>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {item.options.map((opt, i) => {
-              const isActive = sel[item.name] === opt.value;
-              return (
-                <button key={i} onClick={() => setSel(p => ({ ...p, [item.name]: opt.value }))} style={{
-                  display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10,
-                  border: "2px solid " + (isActive ? T.brand : T.g[200]), background: isActive ? T.brandLt : T.white,
-                  cursor: "pointer", textAlign: "left",
-                }}>
-                  <div style={{ width: 18, height: 18, borderRadius: "50%", border: "2px solid " + (isActive ? T.brand : T.g[300]), display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    {isActive && <div style={{ width: 10, height: 10, borderRadius: "50%", background: T.brand }} />}
-                  </div>
-                  <span style={{ fontSize: 12, fontWeight: isActive ? 600 : 500, color: isActive ? T.brand : T.g[600] }}>{opt.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      ))}
-      {onConfirm && (
-        <button onClick={() => onConfirm(sel)} style={{ width: "100%", padding: "12px", borderRadius: 14, background: "linear-gradient(135deg, " + T.brand + ", " + T.brandDk + ")", color: "#fff", border: "none", fontSize: 14, fontWeight: 700, cursor: "pointer", marginTop: 12, boxShadow: "0 4px 16px " + T.brand + "40" }}>
-          Confirm & Continue
-        </button>
       )}
+
+      <Btn onClick={() => onConfirm(utilization)} full style={{ marginTop: 16 }}>
+        Lock {data.meal_label} ✓
+      </Btn>
     </div>
   );
 };
 
-const MealConfirmedBadge = ({ meal, protein, price }) => {
+const MealBadge = ({ data }) => {
   return (
     <div className="si" style={{ padding: "12px 16px", background: T.greenLt, borderRadius: 14, border: "1px solid " + T.green + "20", display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -432,205 +561,101 @@ const MealConfirmedBadge = ({ meal, protein, price }) => {
           <span style={{ color: "#fff", fontSize: 13 }}>✓</span>
         </div>
         <div>
-          <span style={{ fontSize: 13, fontWeight: 700, color: T.green }}>{meal} locked</span>
-          <span style={{ fontSize: 11, color: T.g[500], display: "block" }}>{protein}g protein</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: T.green }}>{data.meal_label} locked</span>
+          <span style={{ fontSize: 11, color: T.g[500], display: "block" }}>{data.total_protein}g protein</span>
         </div>
       </div>
-      <span style={{ fontSize: 15, fontWeight: 800, color: T.dark, fontFamily: mono }}>₹{price}</span>
+      <span style={{ fontSize: 15, fontWeight: 800, color: T.dark, fontFamily: mono }}>₹{data.running_price}</span>
     </div>
   );
 };
 
-// Parse products from bot message text
-const parseProducts = (text) => {
-  const products = [];
-  const lines = text.split('\n');
-  lines.forEach(line => {
-    // Match patterns like: **Product Name** - 450g pack, ₹325, 21.6g protein/100g
-    const match = line.match(/\*\*([^*]+)\*\*\s*-\s*([^,]+),\s*₹(\d+)(?:,\s*([\d.]+)g\s*protein(?:\/100g)?)?/i);
-    if (match) {
-      products.push({
-        name: match[1].trim(),
-        pack_size: match[2].trim(),
-        price: parseInt(match[3]),
-        protein: match[4] ? parseFloat(match[4]) : 20,
-        image_url: null
-      });
-    }
-  });
-  return products;
-};
-
-// Detect which visual component to render
-const getVisualComponent = (msg) => {
-  if (!msg.text && !msg.data) return null;
-  const t = (msg.text || '').toLowerCase();
-  const step = msg.data?.current_step;
-  
-  if (step === 'budget_setup' || (t.includes('supplement') && t.includes('distribute')))
-    return 'distribution_setup';
-  if ((t.includes('₹') && t.includes('protein') && t.includes('pack')) || (t.includes('options') && t.includes('product')))
-    return 'product_cards';
-  if (t.includes('portion') && t.includes('total') && t.includes('protein') && !t.includes('confirm'))
-    return 'portion_summary';
-  if ((t.includes('remaining') || t.includes('leftover')) && (t.includes('option 1') || t.includes('option 2') || t.includes('same meal')))
-    return 'utilization_picker';
-  if ((t.includes('✅') || t.includes('locked')) || (t.includes('confirmed') && t.includes('complete')))
-    return 'meal_complete';
-  return null;
-};
-
-const ChatScreen = ({ sessionId, endpoint, title, icon, iconBg, journeyCurrent, mealSteps, onComplete, onRestart }) => {
-  const [msgs, setMsgs] = useState([]); const [input, setInput] = useState(""); const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState("budget_setup"); const [mealData, setMealData] = useState(null); const [done, setDone] = useState(false);
-  const endRef = useRef(null); const inpRef = useRef(null);
-
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, loading]);
-  useEffect(() => { if (!loading && !done) inpRef.current?.focus(); }, [loading, done]);
+// MEAL PLANNING WIZARD (replaces ChatScreen for Agent 2)
+const MealPlanningWizard = ({ sessionId, onComplete, onRestart }) => {
+  const [msgs, setMsgs] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
   const hasSent = useRef(false);
-  useEffect(() => { if (!hasSent.current) { hasSent.current = true; send(endpoint === ENDPOINTS.mealPlanning ? "Start planning my protein sources" : "Build my weekly order"); } }, []);
 
-  const stepN = { budget_setup: 0, meal_breakfast: 1, meal_lunch: 2, meal_dinner: 3, consolidation: 4 };
+  useEffect(() => {
+    if (!hasSent.current) {
+      hasSent.current = true;
+      send("Start planning my protein sources");
+    }
+  }, []);
 
   const send = async (msg) => {
     if (!msg.trim()) return;
-    setMsgs(p => [...p, { role: "user", text: msg.trim() }]); setInput(""); setLoading(true);
+    setMsgs(p => [...p, { role: "user", text: msg.trim() }]);
+    setLoading(true);
     try {
-      const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sessionId, message: msg.trim() }) });
-      const raw = await res.text(); let data; try { data = JSON.parse(raw); } catch { data = { message: raw }; }
+      const res = await fetch(ENDPOINTS.mealPlanning, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sessionId, message: msg.trim() }) });
+      const raw = await res.text();
+      let data;
+      try {
+        const cleaned = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        data = JSON.parse(cleaned);
+      } catch {
+        data = { message: raw };
+      }
       setMsgs(p => [...p, { role: "bot", text: data.message || raw, data }]);
-      if (data.current_step) setStep(data.current_step);
-      if (data.meal_plan || data.budget) setMealData(data);
-      if (data.cart) setMealData(data);
-      if (data.stage_complete) { setDone(true); setTimeout(() => onComplete(data), 1500); }
-    } catch { setMsgs(p => [...p, { role: "bot", text: "Something went wrong. Try again." }]); }
+      if (data.stage_complete) {
+        setDone(true);
+        setTimeout(() => onComplete(data), 1500);
+      }
+    } catch {
+      setMsgs(p => [...p, { role: "bot", text: "Something went wrong. Try again." }]);
+    }
     setLoading(false);
   };
 
-  const getActions = () => {
-    if (done || loading || msgs.length === 0) return [];
-    const last = msgs.filter(m => m.role === "bot").pop(); if (!last) return [];
-    const t = (last.text || "").toLowerCase();
-    if (t.includes("equal") && t.includes("heavy")) return [{ l: "Equal split", v: "Equal distribution, confirm" }, { l: "Heavy breakfast", v: "Heavy breakfast, confirm" }, { l: "Heavy dinner", v: "Heavy dinner, confirm" }];
-    if (t.includes("sources") && t.includes("chicken") && t.includes("eggs")) return [{ l: "Eggs+Chicken", v: "Eggs and chicken" }, { l: "Chicken+Fish", v: "Chicken and fish" }, { l: "Chicken", v: "Chicken" }, { l: "Fish", v: "Fish" }];
-    if (t.includes("boneless") && t.includes("curry cut") && t.includes("keema")) return [{ l: "Boneless", v: "Boneless" }, { l: "Curry Cut", v: "Curry cut" }, { l: "Keema", v: "Keema" }];
-    if (t.includes("fillet") && t.includes("steaks") && t.includes("cubes")) return [{ l: "Cubes", v: "Boneless cubes" }, { l: "Fillet", v: "Fillet" }, { l: "Steaks", v: "Steaks" }];
-    if (t.includes("curry cut") && t.includes("mince") && t.includes("mutton")) return [{ l: "Curry Cut", v: "Curry cut" }, { l: "Mince", v: "Mince" }];
-    if ((t.includes("option 1") || t.includes("same meal")) && t.includes("option 2")) return [{ l: "Next days", v: "Option 1, use for next days" }, { l: "Other meal", v: "Option 2, different meal today" }];
-    if (t.includes("delivery") && t.includes("every day")) return [{ l: "Daily", v: "Every day" }, { l: "2x/week", v: "Twice a week" }, { l: "Weekly", v: "Once a week" }];
-    if (t.includes("confirm") || t.includes("look good")) return [{ l: "Confirm", v: "Yes, confirm" }, { l: "Change", v: "I want to change something" }];
-    return [];
-  };
+  const renderUI = (msg) => {
+    const { ui_type, ui_data } = msg.data || {};
+    if (!ui_type || !ui_data) return null;
 
-  // Render visual component for bot messages
-  const renderVisualComponent = (msg) => {
-    const compType = getVisualComponent(msg);
-    if (!compType) return null;
-
-    switch (compType) {
-      case 'distribution_setup':
-        return <DistributionPicker target={154} onSelect={(id, label) => send(label + ", confirm")} />;
-      
-      case 'product_cards':
-        const products = parseProducts(msg.text);
-        if (products.length === 0) return null;
-        return (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 12 }}>
-            {products.map((p, i) => (
-              <ProductCard key={i} product={p} selected={false} onSelect={() => send(p.name)} />
-            ))}
-          </div>
-        );
-      
-      case 'portion_summary':
-        // Parse portions from message
-        const portionMatch = msg.text.match(/(\d+\.?\d*)g.*?total/gi);
-        if (!portionMatch) return null;
-        return <PortionCard mealLabel="Breakfast" target={62} portions={[
-          { name: "Chicken", protein: 30, quantity: "150g", pack: "450g pack" },
-          { name: "Eggs", protein: 32, quantity: "5 eggs", pack: "Pack of 6" }
-        ]} />;
-      
-      case 'utilization_picker':
-        return <UtilizationPicker 
-          items={[
-            { name: "Chicken Breast", remaining: "300g remaining", options: [
-              { label: "Use for next 2 days", value: "next_days" },
-              { label: "Use for lunch today", value: "other_meal" }
-            ]}
-          ]} 
-          onConfirm={(sel) => send("Option 1, next days")}
-        />;
-      
-      case 'meal_complete':
-        return <MealConfirmedBadge meal="Breakfast" protein={62.7} price={400} />;
-      
-      default:
-        return null;
+    switch (ui_type) {
+      case 'budget_setup': return <DistributionSetup data={ui_data} onSelect={send} />;
+      case 'source_select': return <SourceChips data={ui_data} onSelect={send} />;
+      case 'cut_select': return <CutChips data={ui_data} onSelect={send} />;
+      case 'product_select': return <ProductCardGrid data={ui_data} onSelect={send} />;
+      case 'portion_confirm': return <PortionConfirmCard data={ui_data} onConfirm={send} />;
+      case 'meal_confirmed': return <MealBadge data={ui_data} />;
+      default: return null;
     }
   };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: T.bg }}>
       <div style={{ padding: "10px 20px", background: T.white, borderBottom: "1px solid " + T.g[100], display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ width: 32, height: 32, borderRadius: T.r.m, background: iconBg, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 14 }}>{icon}</span></div>
-        <div style={{ flex: 1 }}><div style={{ fontSize: 13, fontWeight: 700, color: T.dark }}>{title}</div></div>
-        {mealData?.running_price > 0 && <div style={{ padding: "3px 9px", borderRadius: T.r.full, background: T.dark }}><span style={{ fontSize: 12, fontWeight: 800, color: T.white, fontFamily: mono }}>{"₹" + mealData.running_price}</span></div>}
+        <div style={{ width: 32, height: 32, borderRadius: T.r.m, background: "linear-gradient(135deg, " + T.green + ", #34D399)", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 14 }}>🍽</span></div>
+        <div style={{ flex: 1 }}><div style={{ fontSize: 13, fontWeight: 700, color: T.dark }}>Meal Planning</div></div>
         <button onClick={onRestart} style={{ width: 30, height: 30, borderRadius: T.r.m, border: "1px solid " + T.g[200], background: T.white, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: T.g[400] }} title="Start over">✕</button>
       </div>
-      {mealSteps && <div style={{ padding: "8px 20px 6px", background: T.white, display: "flex", gap: 4, borderBottom: "1px solid " + T.g[100] }}>
-        {mealSteps.map((s, i) => { const cur = stepN[step] || 0; const active = i === cur; const d = i < cur;
-          return <div key={i} style={{ flex: 1, textAlign: "center" }}><div style={{ height: 3, borderRadius: 2, background: d ? T.green : active ? T.brand : T.g[200], transition: "background .3s", marginBottom: 3 }} /><span style={{ fontSize: 9, fontWeight: active ? 700 : 500, color: active ? T.brand : d ? T.green : T.g[400] }}>{s}</span></div>;
-        })}
-      </div>}
-      {!mealSteps && <JourneyTracker steps={STEPS} current={journeyCurrent} />}
-      <div className="no-sb" style={{ flex: 1, overflow: "auto", padding: "10px 12px 6px" }}>
+      <JourneyTracker steps={STEPS} current={3} />
+      <div className="no-sb" style={{ flex: 1, overflow: "auto", padding: "12px 14px" }}>
         {msgs.map((m, i) => {
-          const visualComp = m.role === "bot" ? renderVisualComponent(m) : null;
-          return (
-            <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", marginBottom: 8 }}>
-              {m.role === "user" ? (
-                <div className="si" style={{ padding: "9px 14px", background: T.brand, color: "#fff", borderRadius: "14px 14px 3px 14px", fontSize: 13.5, lineHeight: 1.5, maxWidth: "80%", fontWeight: 500 }}>{m.text}</div>
-              ) : (
-                <div style={{ maxWidth: "90%" }}>
-                  {visualComp ? (
-                    <>
-                      <p style={{ fontSize: 11, color: T.g[400], marginBottom: 6, lineHeight: 1.4 }}>{m.text.substring(0, 100)}{m.text.length > 100 ? '...' : ''}</p>
-                      {visualComp}
-                    </>
-                  ) : (
-                    <div className="si" style={{ padding: "10px 14px", background: T.white, border: "1px solid " + T.g[100], borderRadius: "3px 14px 14px 14px", fontSize: 13, lineHeight: 1.6, color: T.g[700], boxShadow: T.sh.s, whiteSpace: "pre-line" }}>
-                      {m.text.split('**').map((part, i) => i % 2 === 1 ? <strong key={i}>{part}</strong> : part)}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          );
+          if (m.role === "bot") {
+            const ui = renderUI(m);
+            return (
+              <div key={i} style={{ marginBottom: 12 }}>
+                <p style={{ fontSize: 12, color: T.g[400], marginBottom: 6, lineHeight: 1.4 }}>{m.text}</p>
+                {ui || <div style={{ padding: "10px 14px", background: T.white, border: "1px solid " + T.g[100], borderRadius: 14, fontSize: 13, lineHeight: 1.6, color: T.g[700], boxShadow: T.sh.s }}>{m.text}</div>}
+              </div>
+            );
+          }
+          return null;
         })}
-        {loading && <div style={{ display: "flex", gap: 5, padding: "10px 14px", background: T.white, borderRadius: "3px 14px 14px 14px", border: "1px solid " + T.g[100], maxWidth: 70, boxShadow: T.sh.s }}>{[0,1,2].map(i => <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: T.g[300], animation: "pulse 1.2s " + (i*.2) + "s ease-in-out infinite" }} />)}</div>}
-        {done && <div className="si" style={{ textAlign: "center", padding: 16 }}><div style={{ width: 48, height: 48, borderRadius: "50%", background: T.greenLt, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 8px", fontSize: 22 }}>✓</div><p style={{ fontSize: 13, fontWeight: 700, color: T.green }}>{mealSteps ? "All meals planned!" : "Order ready!"}</p></div>}
-        <div ref={endRef} />
+        {loading && <div style={{ display: "flex", gap: 5, padding: "10px 14px", background: T.white, borderRadius: 14, border: "1px solid " + T.g[100], maxWidth: 70, boxShadow: T.sh.s }}>{[0,1,2].map(i => <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: T.g[300], animation: "pulse 1.2s " + (i*.2) + "s ease-in-out infinite" }} />)}</div>}
+        {done && <div className="si" style={{ textAlign: "center", padding: 16 }}><div style={{ width: 48, height: 48, borderRadius: "50%", background: T.greenLt, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 8px", fontSize: 22 }}>✓</div><p style={{ fontSize: 13, fontWeight: 700, color: T.green }}>All meals planned!</p></div>}
       </div>
-      {getActions().length > 0 && <div className="no-sb" style={{ display: "flex", gap: 5, padding: "5px 12px", overflowX: "auto", borderTop: "1px solid " + T.g[50] }}>
-        {getActions().map((a, i) => <button key={i} onClick={() => send(a.v)} style={{ padding: "7px 13px", borderRadius: T.r.full, border: "1.5px solid " + T.g[200], background: T.white, fontSize: 12, fontWeight: 600, color: T.g[700], whiteSpace: "nowrap", cursor: "pointer" }}>{a.l}</button>)}
-      </div>}
-      {!done && <div style={{ padding: "8px 12px 22px", background: T.white, borderTop: "1px solid " + T.g[100] }}>
-        <div style={{ display: "flex", gap: 6 }}>
-          <input ref={inpRef} type="text" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && send(input)} placeholder="Type your choice..." disabled={loading}
-            style={{ flex: 1, padding: "10px 12px", borderRadius: T.r.m, border: "2px solid " + T.g[200], fontSize: 14, background: T.g[50], color: T.dark }}
-            onFocus={e => e.target.style.borderColor = T.brand} onBlur={e => e.target.style.borderColor = T.g[200]} />
-          <Btn onClick={() => send(input)} disabled={!input.trim() || loading} style={{ padding: "10px 12px", borderRadius: T.r.m }}>
-            <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M9 14V4M9 4L4 9M9 4L14 9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </Btn>
-        </div>
-      </div>}
     </div>
   );
 };
 
 const FinalCart = ({ data }) => {
-  const cart = data?.cart || []; const total = data?.total_cart_price || 0; const perDay = data?.price_per_day || 0;
+  const cart = data?.cart || [];
+  const total = data?.total_cart_price || 0;
+  const perDay = data?.price_per_day || 0;
   return (
     <div style={{ minHeight: "100vh", background: T.bg }}>
       <div style={{ background: "linear-gradient(150deg, " + T.dark + ", " + T.charcoal + ")", padding: "20px 20px 44px", borderRadius: "0 0 24px 24px" }}>
@@ -684,15 +709,28 @@ export default function App() {
     }
   };
 
+  const handleKnowIt = async (calories, protein) => {
+    // Skip to meal planning with manual macros
+    const msg = `I know my macros. Daily calories: ${calories}kcal, Daily protein from food: ${protein}g`;
+    try {
+      const res = await fetch(ENDPOINTS.mealPlanning, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sessionId, message: msg }) });
+      setUserData({ daily_calories: calories, daily_protein_g: protein });
+      setScreen("meals");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <>
       <Styles />
       <Shell>
-        {screen === "home" && <Homepage onStart={() => setScreen("onboarding")} />}
+        {screen === "home" && <Homepage onStart={() => setScreen("macro_fork")} />}
+        {screen === "macro_fork" && <MacroFork onKnowIt={handleKnowIt} onCalculate={() => setScreen("calculator_disclaimer")} onRestart={handleRestart} />}
+        {screen === "calculator_disclaimer" && <CalculatorDisclaimer onStart={() => setScreen("onboarding")} onRestart={handleRestart} />}
         {screen === "onboarding" && <Onboarding sessionId={sessionId} onComplete={d => { setUserData(d); setScreen("results"); }} onRestart={handleRestart} />}
         {screen === "results" && <Results data={userData} onContinue={() => setScreen("meals")} />}
-        {screen === "meals" && <ChatScreen sessionId={sessionId} endpoint={ENDPOINTS.mealPlanning} title="Pick your sources" icon="🍽" iconBg={"linear-gradient(135deg, " + T.green + ", #34D399)"} journeyCurrent={3} mealSteps={["Split", "Bfast", "Lunch", "Dinner", "Done"]} onComplete={() => setScreen("weekly")} onRestart={handleRestart} />}
-        {screen === "weekly" && <ChatScreen sessionId={sessionId} endpoint={ENDPOINTS.weeklyCart} title="Weekly Order" icon="🛒" iconBg={"linear-gradient(135deg, " + T.amber + ", #FBBF24)"} journeyCurrent={4} onComplete={d => { setCartData(d); setScreen("cart"); }} onRestart={handleRestart} />}
+        {screen === "meals" && <MealPlanningWizard sessionId={sessionId} onComplete={() => setScreen("cart")} onRestart={handleRestart} />}
         {screen === "cart" && <FinalCart data={cartData} />}
       </Shell>
     </>
