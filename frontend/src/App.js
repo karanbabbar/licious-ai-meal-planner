@@ -712,12 +712,15 @@ const MealPlanningWizard = ({ sessionId, onComplete, onRestart }) => {
     }
   }, []);
 
-  const send = async (msg) => {
-    if (!msg.trim()) return;
-    setMsgs(p => [...p, { role: "user", text: msg.trim() }]);
+  const send = async (message) => {
+    // BUG FIX: Ensure message is always a string
+    const msgText = typeof message === 'string' ? message : (typeof message === 'object' ? JSON.stringify(message) : String(message));
+    if (!msgText.trim()) return;
+    
+    setMsgs(p => [...p, { role: "user", text: msgText.trim() }]);
     setLoading(true);
     try {
-      const res = await fetch(ENDPOINTS.mealPlanning, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sessionId, message: msg.trim() }) });
+      const res = await fetch(ENDPOINTS.mealPlanning, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sessionId, message: msgText.trim() }) });
       const raw = await res.text();
       let data;
       try {
