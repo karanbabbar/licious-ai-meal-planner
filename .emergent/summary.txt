@@ -1,109 +1,91 @@
 <analysis>**original_problem_statement:**
-The user wants to build a React mobile-first web app called Protein Planner v2. The app is a guided wizard to help users calculate protein needs, plan meals with Licious products, and pre-order supplies.
+The user wants to build a React mobile-first web app called Protein Planner v2. The app is a guided wizard to help users calculate their protein needs, plan meals with Licious products, and pre-order supplies.
 
 **PRODUCT REQUIREMENTS:**
-- **Tech Stack:** React (hooks only), Inline styles, Google Fonts (, ). No external UI libraries.
-- **Initial Source:** A single file  was provided as the source of truth for components, styling, and logic.
-- **API Endpoints:**
-  - Onboarding: 
-  - Meal Plan: 
-  - Weekly Cart: 
-- **Screen Flow & Features:**
-  1.  **Onboarding Redesign:**
-      - A Macro Fork screen allows users to either input their macros directly or use a calculator.
-      - A disclaimer screen before the calculator wizard.
-      - A 6-step form wizard for calculation (Name, Age, etc.).
-      - A results screen displaying the calculated macros.
-  2.  **Visual Meal Planning:**
-      - The meal planning and cart stages are no longer a simple chat. The UI is now driven by a  field from the backend API.
-      - Specific visual components must be rendered for different steps like , , , etc.
-      - The  from the API is now a short, secondary context line.
-  3.  **Critical Rules:**
-      - A single  must persist across all API calls.
-      - UI components must collapse into summary badges after being used.
-      - Product selection logic must be enforced (e.g., max 1 product per category).
-      - No demo/fallback modes; show an error on API failure.
+-   **Tech Stack:** React (hooks only), Inline styles, Google Fonts (, ). No external UI libraries. The entire application must be contained within a single  file.
+-   **API Endpoints:**
+    -   Onboarding: 
+    -   Meal Plan: 
+    -   Weekly Cart: 
+-   **Screen Flow & Features:**
+    1.  **Onboarding Redesign:** A Macro Fork screen, a disclaimer, a 6-step calculator wizard, and a results screen.
+    2.  **Visual Meal Planning:** The UI is driven by a  field from the backend API, rendering specific visual components for different steps like , , , etc.
+    3.  **Weekly Order Flow:** After meal planning is complete, the app should transition to a weekly order flow controlled by the  endpoint before showing the final cart.
+    4.  **Error Handling:** When an API call fails or returns an unrecognized response, the app must show a text input to allow the user to continue the conversation manually.
+-   **Critical Rules:**
+    -   A single  must persist across all API calls.
+    -   UI components must collapse into summary badges after being used.
+    -   Product selection logic: Max 1 product per category; tapping another product in the same category should swap the selection.
+    -   All interactive elements (CTAs) must be disabled after a click to prevent double submissions.
+    -   The frontend must be defensive and handle inconsistent data structures from the backend (e.g., object vs. array, alternate field names).
 
 **User's preferred language**: English
 
 **what currently exists?**
-A single-file React application () has been built and iteratively updated based on user feedback. It now includes the redesigned onboarding flow (Macro Fork) and a sophisticated meal planning UI where components are rendered dynamically based on the API response's . Several rounds of bug fixes have been implemented.
+The application is a single, monolithic React component () that dynamically renders a multi-step wizard. It includes the onboarding flow and a visual meal planner. Several rounds of bug fixes have been attempted to make the app more robust against an inconsistent backend API, but significant issues remain. The latest round of fixes introduced a new critical crash. The user has explicitly forbidden refactoring the  file into smaller components.
 
 **Last working item**:
--   **Last item agent was working:** The agent was working on fixing a second round of 6 critical and high-priority bugs reported by the user after testing the meal planning flow. The main issues were a recurring runtime error (), duplicate UI components rendering, flawed product selection logic, and various visual glitches.
--   **Status:** IN PROGRESS
--   **Agent Testing Done:** N (The agent applied the code changes but did not verify them by testing the application flow where the bugs occur.)
--   **Which testing method agent to use?** frontend testing agent (The bugs are all within the frontend's complex state management and rendering logic during the meal planning wizard. The agent needs to simulate a user going through the steps: selecting a distribution, sources, products, and confirming portions to validate the fixes.)
+-   **Last item agent was working:** The agent was tasked with fixing a critical bug where the app crashes with a  error. This is the third instance of a  related crash due to the backend sending an object instead of an array. The user provided a specific fix for the  component and a mandate to proactively guard **every**  call in the codebase with an  check.
+-   **Status:** NOT STARTED
+-   **Agent Testing Done:** N
+-   **Which testing method agent to use?** frontend testing agent (After applying the fixes, the agent must test the entire meal planning flow to ensure no  errors occur in any component and that all other recent fixes are working as expected.)
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-The following bugs were addressed in the last action, but the fixes have not been verified. They are the highest priority.
-
--   **Issue 1:** (P0) Critical recurring error  freezes the app.
--   **Issue 2:** (P1) The collapsed badge for  shows undefined/undefined/undefined.
--   **Issue 3:** (P1) Users can select too many products, violating the max 1 per category rule.
--   **Issue 4:** (P2) The Select These button on the product grid remains active after submission.
--   **Issue 5:** (P2) Rounding error displays protein totals as long floating-point numbers (e.g., 29.2999...).
--   **Issue 6:** (P2) The app freezes when confirming pack utilization choices, likely related to Issue 1.
+-   **Issue 1:** (P0) CRITICAL CRASH:  in the  component.
+-   **Issue 2:** (P0) SYSTEMIC BUG: Multiple components crash when the backend API returns an object instead of an array for data that is expected to be iterable (e.g., , , ).
+-   **Issue 3:** (P1) UNVERIFIED FIX: The critical flow from meal planning (Agent 2) to the weekly order (Agent 3) is broken. The app skips the weekly order screen and goes directly to an empty final cart.
+-   **Issue 4:** (P1) UNVERIFIED FIX: All interactive buttons must be disabled after a click to prevent double API calls.
+-   **Issue 5:** (P2) UNVERIFIED FIX: Fallback logic for when the backend returns a response without a  (should show a text input).
+-   **Issue 6:** (P2) UNVERIFIED FIX: Numerous visual and data consistency bugs (stale badge values, incorrect distribution calculations, previously purchased products appearing as selectable).
 
 **Issues Detail:**
--   **Issue 1: Critical recurring error  freezes the app.**
-    -   **Attempted fixes:** The  function in  was updated to perform a more robust type-check, converting objects to a string representation before calling . The  function was also updated to explicitly pass a string.
+-   **Issue 1: CRITICAL CRASH: **
+    -   **Attempted fixes:** None yet. The agent received the user's instructions but has not acted on them.
     -   **Next debug checklist:**
-        1.  Start the meal planning flow.
-        2.  Proceed to the  step where pack utilization options are shown.
-        3.  Select the utilization options and click the Lock Meal button.
-        4.  Observe if the application freezes or if it transitions smoothly to the next step. Check the browser console for errors.
-    -   **Why fix this issue and what will be achieved with the fix?** This is an app-breaking bug that completely blocks users from completing their meal plan. Fixing it is essential for the app to be usable.
-    -   **Status:** IN PROGRESS
+        1.  Open .
+        2.  Locate the  component.
+        3.  Apply the user's provided fix: ensure the  variable is always an array before calling , with fallbacks.
+        4.  This is a patch. The real fix is Issue 2.
+    -   **Why fix this issue and what will be achieved with the fix?** This is an app-breaking crash that blocks the user from proceeding with their meal plan.
+    -   **Status:** NOT STARTED
     -   **Is recurring issue?** Y
     -   **Should Test frontend/backend/both after fix?** frontend
-    -   **Blocked on other issue:** None. This issue is a primary blocker.
+    -   **Blocked on other issue:** None. This is the primary blocker.
 
--   **Issue 2: The collapsed badge for  shows undefined/undefined/undefined.**
-    -   **Attempted fixes:** The  component logic was updated to read the confirmed distribution values from the correct path in the message data ().
+-   **Issue 2: SYSTEMIC BUG: Unsafe  calls on potentially non-array data**
+    -   **Attempted fixes:** The agent has fixed this issue for  and  in previous turns, but failed to apply the pattern proactively.
     -   **Next debug checklist:**
-        1.  In the meal planning flow, select a protein distribution in the  step.
-        2.  Proceed to the next step.
-        3.  Examine the collapsed badge for the Distribution step and verify it shows the correct protein values (e.g., ✓ Equal — 51g / 51g / 50g).
-    -   **Why fix this issue and what will be achieved with the fix?** Fixes a jarring visual bug that makes the application look unprofessional and broken.
-    -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** frontend
-    -   **Blocked on other issue:** None.
-
--   **Issue 3: Users can select too many products, violating the max 1 per category rule.**
-    -   **Attempted fixes:** The  logic for the product grid was changed to *swap* the selected product within a category instead of adding a new one. A Pick 1 label was also added.
-    -   **Next debug checklist:**
-        1.  In the  step, select a product (e.g., Chicken Breast).
-        2.  Select a different product from the same category (e.g., Chicken Curry Cut).
-        3.  Verify that the first product becomes deselected and the second one becomes selected.
-        4.  Verify that you can still select one product from a different category (e.g., Eggs) at the same time.
-    -   **Why fix this issue and what will be achieved with the fix?** Enforces correct business logic, prevents users from creating nonsensical meal plans, and avoids calculation errors in subsequent steps.
-    -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** N
+        1.  Search the entire  file for every instance of .
+        2.  For each instance, add a guard to ensure the variable is an array before the map is called. Use  and provide a safe fallback (e.g.,  or converting from an object if the format is known).
+    -   **Why fix this issue and what will be achieved with the fix?** This will fix the root cause of the recurring crashes and make the application resilient to the backend's inconsistent API responses.
+    -   **Status:** NOT STARTED
+    -   **Is recurring issue?** Y
     -   **Should Test frontend/backend/both after fix?** frontend
     -   **Blocked on other issue:** None.
 
 **In progress Task List**:
-None. The current focus is entirely on bug fixing.
+None.
 
 **Upcoming and Future Tasks**
-None specified by the user. The priority is to stabilize the existing features.
+- **P0: Stabilize the Application:**
+    - Fix the  crash.
+    - Audit and harden every  call in the application.
+    - Verify that all previously implemented fixes from the COMPLETE FIX user message are working correctly, especially the Agent 3 flow, CTA disabling, and the text input fallback.
 
 **Completed work in this session**
--   Initial deployment of the React app based on the user-provided .
--   **Onboarding Redesign:** Implemented the Macro Fork screen allowing users to either calculate macros or enter them manually.
--   **Visual Meal Planning:** Refactored the chat interface into a dynamic UI driven by  from the backend, creating several new visual components for each step.
--   Applied a first round of bug fixes for issues like duplicate UI and supplement input.
--   Attempted to apply a second, more comprehensive round of bug fixes for critical errors.
+-   Multiple rounds of bug fixes were attempted to address issues with state management, UI consistency, and data parsing.
+-   A new  component was created to handle the flow for the third API agent.
+-   Defensive programming patterns were added to several components (, ) to handle inconsistent API data formats.
+-   Logic was added to disable CTA buttons after clicks using a  state.
+-   A fallback UI with a text input was added for API responses that do not contain a .
 
 **Earlier issues found/mentioned but not fixed**
-All known issues have a fix that has been implemented but is pending verification. There are no known issues that have been ignored.
+The core systemic issue of the frontend not being robust enough to handle the backend's inconsistent data structures has not been fully resolved. While individual components were patched, the agent failed to perform a full audit as requested, leading to the latest  crash.
 
 **Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork:** The  runtime error.
--   **Recurrence count:** 2
+-   **Issue recurrence in previous fork:** The  error. This has occurred three times, for , , and now .
+-   **Recurrence count:** 3
 -   **Status:** IN PROGRESS
 
 **Code Architecture**
@@ -111,23 +93,23 @@ All known issues have a fix that has been implemented but is pending verificatio
 
 **Key Technical Concepts**
 -   **Framework/Library:** React 18
--   **State Management:** React Hooks (, , ) for local component state.
--   **Styling:** All styling is done via inline CSS-in-JS style objects.
--   **API Communication:** Asynchronous  calls to external n8n webhook URLs.
--   **Architecture:** Single Page Application (SPA) with the entire application logic encapsulated in a single monolithic component ().
+-   **State Management:** React Hooks (, )
+-   **Styling:** Inline CSS-in-JS style objects.
+-   **Architecture:** Single Page Application (SPA) in a single monolithic component ().
+-   **Dynamic UI:** The UI is rendered dynamically based on a  field received from the backend API.
+-   **Defensive Programming:** The app requires robust checks for data types (object vs. array) and alternate field names due to an inconsistent backend.
 
 **key DB schema**
-N/A. This is a frontend-only application that communicates with stateless backend APIs.
+N/A
 
 **changes in tech stack**
 None.
 
 **All files of reference**
--   : The sole file containing all application code, including components, state, API calls, and styles. It is the only file that needs to be modified.
--   : Used to import the required Google Fonts.
+-   : The only file containing all application code.
 
-**Areas that need refactoring**
--   The monolithic  file is over 2000 lines long and contains dozens of components. This severely impacts readability and maintainability. The file should be broken down into a proper component structure (e.g., , , ) to improve code organization.
+**Areas that need refactoring**:
+The user has explicitly stated **NOT** to refactor  by splitting it into multiple files. However, the code *within* the components requires significant refactoring to implement defensive data handling and prevent crashes.
 
 **key api endpoints**
 -   **Onboarding:** 
@@ -135,38 +117,42 @@ None.
 -   **Weekly Cart:** 
 
 **Critical Info for New Agent**
--   **Verify Fixes First:** Your immediate priority is to test the meal planning flow and confirm if the latest round of bug fixes (especially the  error) was successful. Do not proceed without verification.
--   **Backend-Driven UI:** The meal planning flow is controlled by the  and  fields in the API response. The frontend's job is to render the correct component based on this data. Do not implement any UI logic that is not dictated by the API.
--   **Monolithic Codebase:** Be prepared to work within the single, large  file. All changes will be made there. Use search to navigate the file effectively.
--   **Recurring Bug:** The  error has appeared twice. It happens when an object is passed to the  function instead of a string. Be extra vigilant about the data types being passed around, especially from  handlers in the new UI components.
+-   **Highest Priority:** Your first task is to fix the  crash in .
+-   **Global Audit Required:** After patching the  component, you MUST search for every  call in  and add  guards to prevent this type of crash from happening again. This is a direct and repeated instruction from the user.
+-   **Verify Past Fixes:** The previous agent implemented a large number of fixes (COMPLETE FIX) that have not been tested. After stabilizing the app, you must verify that these are working, especially the critical path from meal planning to the weekly order screen.
+-   **Backend is Unreliable:** Assume the backend API will send inconsistent data. Field names may differ ( vs. ), and data types may be wrong (object instead of array). All components must handle these variations gracefully.
+-   **NO FILE REFACTORING:** Do not split  into multiple files.
 
 **documents and test reports created in this job**
-None.
+-   
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User (Message 75):** Reported 6 critical bugs from testing, including the recurring  error, and provided detailed instructions on how to fix each one. **Status: Fixes attempted, pending verification.**
-2.  **User (Message 56):** Reported the first round of 8 bugs after the visual components were implemented. **Status: Mostly resolved, though some issues recurred.**
-3.  **User (Message 47):** Provided the full specification for the Onboarding Redesign and the backend-driven  visual component system. **Status: Implemented.**
-4.  **User (Message 34):** Requested the initial shift from a text-based chat to visual UI components for meal planning. **Status: Implemented.**
-5.  **User (Message 5):** Provided initial clarifications and rules for the build. **Status: Implemented.**
-6.  (Older messages defined the initial scope and provided assets.)
+1.  **User (LATEST):** Reports , provides a specific fix for , and reiterates the need to guard **every**  call in the codebase. **Status: Pending.**
+2.  **User:** Reports that  are not rendering and the Continue button is disabled due to the backend sending a string array instead of an object array for sources. Instructs agent to apply defensive patterns everywhere. **Status: Fix attempted, but led to the  bug.**
+3.  **User:** Reports that  because the backend is sending an object. Provides a fix to convert the object to an array. **Status: Fix attempted.**
+4.  **User:** Reports a new set of 5 critical bugs (Round 3), including the broken Agent 3 flow (blocker), non-disabling CTAs, and visual glitches. Provides detailed fix instructions. **Status: Fix attempted.**
+5.  **User:** Asks the agent to add a retry mechanism for failed API calls. **Status: Fix attempted.**
+6.  **Agent:** Finishes after claiming to have fixed the second round of 6 bugs. **Status: Incomplete, as the fixes were not verified and new bugs were immediately found.**
+7.  **User:** Reports a second round of 6 critical bugs, including the recurring  error. **Status: Fix attempted.**
+8.  **User:** Provides clarifications, including instructions **not** to refactor  and notes about backend logic changes. **Status: Acknowledged by agent.**
+9.  **Agent:** Proposes a plan to test and fix the 6 outstanding bugs. **Status: Approved by user.**
+10. **(Start of Fork):** Handoff summary details the state of the app with 6 unverified bug fixes.
 
 **Project Health Check:**
--   **Broken:** The meal planning flow is likely still broken due to the unverified, critical  error which freezes the application.
--   **Mocked:** None.
+-   **Broken:** The application is in a non-functional state and crashes during the meal planning flow due to the  error.
 
 **3rd Party Integrations**
--   **n8n Webhooks:** The app is tightly coupled with three custom webhook endpoints provided by the user for its backend logic.
--   **Google Fonts:** Imports  and .
+-   **n8n Webhooks:** Used for all backend logic.
+-   **Google Fonts:** , .
 
 **Testing status**
 -   **Testing agent used after significant changes:** NO
 -   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** None.
--   **Known regressions:** The  error is a known regression that has occurred twice.
+-   **Test files created:** None
+-   **Known regressions:** The  error is a recurring regression. The entire app is unstable due to a lack of comprehensive testing after each change.
 
 **Credentials to test flow:**
 N/A
 
 **What agent forgot to execute**
-The agent forgot to verify its latest fixes. After applying the code changes for the second round of bugs, it did not take any action (like taking screenshots of the relevant steps) to confirm whether the bugs were actually resolved. This is a critical missed step, especially for a recurring, app-breaking bug.</analysis>
+The agent repeatedly failed to apply fixes globally despite user instructions. After fixing the  error for  and , it did not proactively check other components like , which led directly to the current crash. The core failure is not learning from repeated errors and applying the solution systemically.</analysis>
