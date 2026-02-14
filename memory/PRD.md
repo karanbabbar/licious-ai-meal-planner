@@ -11,8 +11,7 @@ Build a React mobile-first web app called "Protein Planner v2" - a guided wizard
 
 ## API Endpoints
 - Onboarding: `https://karanbabbar.app.n8n.cloud/webhook/v2/onboarding`
-- Meal Planning: `https://karanbabbar.app.n8n.cloud/webhook/v2/meal-planning`
-- Weekly Cart: `https://karanbabbar.app.n8n.cloud/webhook/v2/weekly-cart`
+- Meal Planning (merged with weekly): `https://karanbabbar.app.n8n.cloud/webhook/v2/meal-planning`
 
 ## User Flow
 1. **Homepage** → "Plan & Pre-Order Protein"
@@ -20,18 +19,26 @@ Build a React mobile-first web app called "Protein Planner v2" - a guided wizard
 3. **Calculator Disclaimer** → (if calculator path)
 4. **Onboarding Wizard** → 6-step form (name, age, measurements, goals, activity, preferences)
 5. **Results** → Show calculated macros
-6. **Meal Planning Wizard (Agent 2)** → Backend-driven UI:
+6. **Meal Planning Wizard (Merged Agent 2+3)** → Backend-driven UI through single endpoint:
    - `budget_setup` → Distribution selection + supplements
    - `source_select` → Choose protein sources (max 3)
    - `cut_select` → Cut preference selection
    - `product_select` → Select products (max 1 per category)
    - `portion_confirm` → Confirm portions and utilization
    - `meal_confirmed` → Meal locked badge
-7. **Weekly Order Wizard (Agent 3)** → Build weekly order:
-   - `delivery_select` → Delivery preference
-   - `weekly_plan` → Review weekly plan
-   - `cart_display` → Preview cart before finalizing
-8. **Final Cart** → Weekly supply summary with Licious links
+   - `weekly_summary` → 7-day plan + cart preview
+   - `delivery_select` → Time slot selection
+   - `order_confirmed` → Final confirmation screen
+7. **Final Cart** → Weekly supply summary with Licious links
+
+## Structured JSON Selections
+The frontend sends structured JSON instead of plain text for backend reliability:
+- Distribution tap → `{"distribution": "Equal", "supplement_grams": 0}`
+- Source select → `{"sources": ["eggs", "chicken"]}`
+- Cut select → `{"cut": "Boneless"}`
+- Product select → `{"products": ["Chicken Breast Boneless 450g"]}`
+- Utilization → `{"utilization": {"Eggs Pack of 6": "same_meal_multi_day"}}`
+- Time slot → `{"time_slot": "morning"}`
 
 ## Key Business Rules
 - Single `session_id` persists across all API calls
