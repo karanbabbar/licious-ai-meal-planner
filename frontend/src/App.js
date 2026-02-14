@@ -4,7 +4,6 @@ const API_BASE = "https://karanbabbar.app.n8n.cloud/webhook";
 const ENDPOINTS = {
   onboarding: `${API_BASE}/v2/onboarding`,
   mealPlanning: `${API_BASE}/v2/meal-planning`,
-  weeklyCart: `${API_BASE}/v2/weekly-cart`,
 };
 const genId = () => `pp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
