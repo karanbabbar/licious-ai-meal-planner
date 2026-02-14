@@ -666,7 +666,8 @@ const SourceChips = ({ data, onSelect }) => {
   const handleSubmit = () => {
     if (selected.length === 0 || isSubmitting) return;
     setIsSubmitting(true);
-    onSelect(selected.join(" and "));
+    // Send structured JSON instead of text
+    onSelect({ sources: selected });
   };
   
   return (
