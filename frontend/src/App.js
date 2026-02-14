@@ -48,10 +48,10 @@ const Btn = ({ children, onClick, v = "primary", disabled, loading, full, style 
 
 const PillSelect = ({ options, value, onChange, multi = false }) => (
   <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-    {options.map(opt => {
-      const sel = multi ? (value || []).includes(opt.value) : value === opt.value;
-      return <button key={opt.value} onClick={() => multi ? onChange(sel ? (value||[]).filter(v=>v!==opt.value) : [...(value||[]), opt.value]) : onChange(opt.value)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: T.r.full, border: "2px solid " + (sel ? T.brand : T.g[200]), background: sel ? T.brandLt : T.white, color: sel ? T.brand : T.g[700], fontSize: 14, fontWeight: sel ? 700 : 500, cursor: "pointer", transition: "all .2s", whiteSpace: "nowrap" }}>
-        {opt.icon && <span style={{ fontSize: 18 }}>{opt.icon}</span>}{opt.label}
+    {(Array.isArray(options) ? options : []).map((opt, idx) => {
+      const sel = multi ? (Array.isArray(value) ? value : []).includes(opt?.value) : value === opt?.value;
+      return <button key={(opt?.value || idx)} onClick={() => multi ? onChange(sel ? (Array.isArray(value) ? value : []).filter(v=>v!==opt?.value) : [...(Array.isArray(value) ? value : []), opt?.value]) : onChange(opt?.value)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: T.r.full, border: "2px solid " + (sel ? T.brand : T.g[200]), background: sel ? T.brandLt : T.white, color: sel ? T.brand : T.g[700], fontSize: 14, fontWeight: sel ? 700 : 500, cursor: "pointer", transition: "all .2s", whiteSpace: "nowrap" }}>
+        {opt?.icon && <span style={{ fontSize: 18 }}>{opt.icon}</span>}{opt?.label || ''}
         {sel && "  ✓"}
       </button>;
     })}
@@ -632,12 +632,24 @@ const SourceChips = ({ data, onSelect }) => {
   const maxSources = 3;
   
   // Defensive: handle alternate field names from backend
-  const mealLabel = data.meal_label || data.meal || "Meal";
-  const proteinTarget = data.protein_target || data.target || 0;
-  const rawSources = data.available_sources || data.sources || [];
+  const mealLabel = data?.meal_label || data?.meal || "Meal";
+  const proteinTarget = data?.protein_target || data?.target || 0;
+  
+  // DEFENSIVE: Ensure rawSources is always an array
+  let rawSources = data?.available_sources || data?.sources || [];
+  if (!Array.isArray(rawSources)) {
+    if (typeof rawSources === 'object' && rawSources !== null) {
+      rawSources = Object.keys(rawSources);
+    } else if (typeof rawSources === 'string') {
+      rawSources = [rawSources];
+    } else {
+      rawSources = [];
+    }
+  }
+  
   const iconMap = { eggs: "🥚", chicken: "🍗", fish: "🐟", mutton: "🥩" };
   const sources = rawSources.map(s => 
-    typeof s === 'string' ? { name: s, icon: iconMap[s.toLowerCase()] || "🍖" } : s
+    typeof s === 'string' ? { name: s, icon: iconMap[(s || '').toLowerCase()] || "🍖" } : (s || { name: 'Unknown', icon: '🍖' })
   );
   
   const handleSubmit = () => {
@@ -698,8 +710,21 @@ const CutChips = ({ data, onSelect }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Defensive: handle alternate field names from backend
-  const category = data.category || data.source || data.protein_source || "Protein";
-  const cuts = data.cuts || data.cut_options || data.options || [];
+  const category = data?.category || data?.source || data?.protein_source || "Protein";
+  
+  // DEFENSIVE: Ensure cuts is always an array - handle object, string, or missing data
+  let rawCuts = data?.cuts || data?.cut_options || data?.options || [];
+  let cuts = [];
+  if (Array.isArray(rawCuts)) {
+    cuts = rawCuts;
+  } else if (typeof rawCuts === 'object' && rawCuts !== null) {
+    // Convert object to array (e.g., { boneless: {...}, bone_in: {...} })
+    cuts = Object.entries(rawCuts).map(([key, val]) => 
+      typeof val === 'object' ? { name: key, ...val } : key
+    );
+  } else if (typeof rawCuts === 'string') {
+    cuts = [rawCuts];
+  }
   
   const handleSelect = (cut) => {
     if (isSubmitting) return;
@@ -708,16 +733,26 @@ const CutChips = ({ data, onSelect }) => {
     onSelect(cut);
   };
   
+  // Don't render if no cuts available
+  if (!cuts || cuts.length === 0) {
+    return (
+      <div className="si" style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
+        <p style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 12 }}>{category} cut preference</p>
+        <p style={{ fontSize: 12, color: T.g[400] }}>No cut options available</p>
+      </div>
+    );
+  }
+  
   return (
     <div className="si" style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
       <p style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 12 }}>{category} cut preference</p>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-        {cuts.map(cut => {
-          const cutName = typeof cut === 'string' ? cut : cut.name || cut.label;
+        {cuts.map((cut, idx) => {
+          const cutName = typeof cut === 'string' ? cut : (cut?.name || cut?.label || `Option ${idx + 1}`);
           const isSelected = selected === cutName;
           return (
             <button 
-              key={cutName} 
+              key={cutName + idx} 
               onClick={() => handleSelect(cutName)}
               disabled={isSubmitting}
               style={{ 
