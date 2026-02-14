@@ -61,6 +61,13 @@ Build a React mobile-first web app called "Protein Planner v2" - a guided wizard
 6. **P2 - Lock Meal button** - Disabled after submission with loading state
 7. **Retry mechanism** - ErrorRetry component shows "Something went wrong. Tap to retry" on API failures
 
+### Bug Fixes - Round 3 (Dec 2025) ✅
+1. **CRITICAL - Agent 3 not triggered** - Created WeeklyOrderWizard component, flow now: meals → weekly → cart
+2. **Distribution badge 0g values** - Added calculateDistribution() fallback when API returns zeros
+3. **₹0 products selectable** - Filter out already-purchased products, show "Already in your order" section
+4. **CTAs not disabling** - Added isSubmitting state to: DistributionSetup, SourceChips, CutChips, DeliverySelect, WeeklyPlanReview, CartPreview
+5. **Distribution fallback calc** - Helper function calculates Equal/Heavy Breakfast/Lunch/Dinner splits locally
+
 ---
 
 ## Prioritized Backlog
