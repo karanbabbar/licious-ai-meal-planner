@@ -996,13 +996,11 @@ export default function App() {
   const handleKnowIt = async (calories, protein) => {
     // Skip to meal planning with manual macros
     const msg = `I know my macros. Daily calories: ${calories}kcal, Daily protein from food: ${protein}g`;
-    try {
-      const res = await fetch(ENDPOINTS.mealPlanning, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sessionId, message: msg }) });
-      setUserData({ daily_calories: calories, daily_protein_g: protein });
-      setScreen("meals");
-    } catch (err) {
-      console.error(err);
-    }
+    const res = await fetch(ENDPOINTS.mealPlanning, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sessionId, message: msg }) });
+    const text = await res.text();
+    if (!text || text.trim() === '') throw new Error('Empty response');
+    setUserData({ daily_calories: calories, daily_protein_g: protein });
+    setScreen("meals");
   };
 
   return (
