@@ -600,10 +600,11 @@ const DistributionSetup = ({ data, onSelect }) => {
             if (isSubmitting) return;
             setSel(d.label);
             setIsSubmitting(true);
-            const msg = supplement && supplementGrams 
-              ? `I take ${supplementGrams}g of supplement protein daily, ${d.label}, confirm`
-              : `No supplements, ${d.label}, confirm`;
-            onSelect(msg);
+            // Send structured JSON instead of text
+            onSelect({ 
+              distribution: d.label,
+              supplement_grams: supplement && supplementGrams ? Number(supplementGrams) : 0
+            });
           };
           
           return (
