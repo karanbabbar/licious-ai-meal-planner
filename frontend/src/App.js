@@ -1481,278 +1481,7 @@ const MealPlanningWizard = ({ sessionId, onComplete, onRestart }) => {
   );
 };
 
-// WEEKLY ORDER WIZARD (Agent 3)
-const WeeklyOrderWizard = ({ sessionId, onComplete, onRestart }) => {
-  const [msgs, setMsgs] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
-  const [error, setError] = useState(null);
-  const [lastMessage, setLastMessage] = useState(null);
-  const hasSent = useRef(false);
-
-  useEffect(() => {
-    if (!hasSent.current) {
-      hasSent.current = true;
-      send("Build my weekly order");
-    }
-  }, []);
-
-  // FIX 6: Safe send function that handles ALL input types
-  const send = async (input) => {
-    let text = '';
-    if (typeof input === 'string') text = input;
-    else if (typeof input === 'object' && input !== null) text = JSON.stringify(input);
-    else text = String(input || '');
-    
-    text = text.trim();
-    if (!text) return;
-    
-    setLastMessage(text);
-    setError(null);
-    setMsgs(p => [...p, { role: "user", text }]);
-    setLoading(true);
-    try {
-      const res = await fetch(ENDPOINTS.weeklyCart, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sessionId, message: text }) });
-      const raw = await res.text();
-      
-      if (!raw || raw.trim() === '') {
-        throw new Error('Empty response from server');
-      }
-      
-      let data;
-      try {
-        const cleaned = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-        data = JSON.parse(cleaned);
-      } catch {
-        data = { message: raw };
-      }
-      setMsgs(p => [...p, { role: "bot", text: data.message || raw, data }]);
-      if (data.stage_complete) {
-        setDone(true);
-        setTimeout(() => onComplete(data), 1500);
-      }
-    } catch (err) {
-      console.error('API Error:', err);
-      setError(true);
-      setMsgs(p => p.slice(0, -1));
-    }
-    setLoading(false);
-  };
-  
-  const handleRetry = () => {
-    if (lastMessage) {
-      send(lastMessage);
-    } else {
-      send("Build my weekly order");
-    }
-  };
-
-  // FIX 1: Known ui_types for Agent 3
-  const knownUiTypes = ['delivery_select', 'weekly_plan', 'cart_display'];
-
-  const renderUI = (msg, isLatest) => {
-    const uiType = msg.data?.ui_type;
-    const uiData = msg.data?.ui_data;
-    
-    // If we have a recognized ui_type with data, render the visual component
-    if (uiType && uiData && knownUiTypes.includes(uiType)) {
-      switch (uiType) {
-        case 'delivery_select': return <DeliverySelect data={uiData} onSelect={send} />;
-        case 'weekly_plan': return <WeeklyPlanReview data={uiData} onConfirm={send} />;
-        case 'cart_display': return <CartPreview data={uiData} onConfirm={send} />;
-        default: return null;
-      }
-    }
-    
-    // FIX 1: FALLBACK - Show text + input for ANY unrecognized response
-    if (isLatest) {
-      const text = msg.data?.message || msg.text || '';
-      return (
-        <div style={{ padding: "14px 16px", background: T.white, border: "1px solid " + T.g[100], borderRadius: 14, boxShadow: T.sh.s }}>
-          <FormattedText text={text} />
-          <ChatInput onSend={send} disabled={loading} />
-        </div>
-      );
-    }
-    
-    return null;
-  };
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: T.bg }}>
-      <div style={{ padding: "10px 20px", background: T.white, borderBottom: "1px solid " + T.g[100], display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ width: 32, height: 32, borderRadius: T.r.m, background: "linear-gradient(135deg, " + T.amber + ", #FBBF24)", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 14 }}>🛒</span></div>
-        <div style={{ flex: 1 }}><div style={{ fontSize: 13, fontWeight: 700, color: T.dark }}>Weekly Order</div></div>
-        <button onClick={onRestart} style={{ width: 30, height: 30, borderRadius: T.r.m, border: "1px solid " + T.g[200], background: T.white, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: T.g[400] }} title="Start over">✕</button>
-      </div>
-      <JourneyTracker steps={STEPS} current={4} />
-      <div className="no-sb" style={{ flex: 1, overflow: "auto", padding: "12px 14px" }}>
-        {(Array.isArray(msgs) ? msgs : []).map((m, i) => {
-          if (m?.role === "bot") {
-            const isLatestBot = i === (Array.isArray(msgs) ? msgs : []).length - 1 || (i === (Array.isArray(msgs) ? msgs : []).length - 2 && loading);
-            
-            // Show collapsed badge for old bot messages with ui_type
-            if (!isLatestBot && m.data?.ui_type) {
-              return <div key={i} style={{ padding: "8px 12px", background: T.g[50], borderRadius: 10, fontSize: 12, color: T.g[600], fontWeight: 600, marginBottom: 8 }}>✓ {m.data.ui_type === 'delivery_select' ? 'Delivery confirmed' : m.data.ui_type === 'weekly_plan' ? 'Plan reviewed' : 'Step completed'}</div>;
-            }
-            
-            const ui = renderUI(m, isLatestBot);
-            
-            return (
-              <div key={i} style={{ marginBottom: 12 }}>
-                {isLatestBot && m.text && !m.data?.ui_type && (
-                  <p style={{ fontSize: 12, color: T.g[400], marginBottom: 6, lineHeight: 1.4 }}>{m.text}</p>
-                )}
-                {ui}
-              </div>
-            );
-          }
-          return null;
-        })}
-        {loading && <div style={{ display: "flex", gap: 5, padding: "10px 14px", background: T.white, borderRadius: 14, border: "1px solid " + T.g[100], maxWidth: 70, boxShadow: T.sh.s }}>{[0,1,2].map(i => <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: T.g[300], animation: "pulse 1.2s " + (i*.2) + "s ease-in-out infinite" }} />)}</div>}
-        {error && !loading && <ErrorRetry onRetry={handleRetry} />}
-        {done && <div className="si" style={{ textAlign: "center", padding: 16 }}><div style={{ width: 48, height: 48, borderRadius: "50%", background: T.greenLt, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 8px", fontSize: 22 }}>🛒</div><p style={{ fontSize: 13, fontWeight: 700, color: T.green }}>Weekly order ready!</p></div>}
-      </div>
-    </div>
-  );
-};
-
-// Agent 3 UI Components
-const DeliverySelect = ({ data, onSelect }) => {
-  const [selected, setSelected] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const handleSelect = (option) => {
-    if (isSubmitting) return;
-    setSelected(option);
-    setIsSubmitting(true);
-    onSelect(option);
-  };
-  
-  // DEFENSIVE: Ensure options is always an array
-  let options = data?.options || ['Single delivery', 'Multiple deliveries'];
-  if (!Array.isArray(options)) {
-    if (typeof options === 'object' && options !== null) {
-      options = Object.values(options);
-    } else if (typeof options === 'string') {
-      options = [options];
-    } else {
-      options = ['Single delivery', 'Multiple deliveries'];
-    }
-  }
-  
-  return (
-    <div className="si" style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
-      <p style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 12 }}>Delivery preference</p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {(Array.isArray(options) ? options : []).map((opt, idx) => {
-          const optStr = typeof opt === 'string' ? opt : String(opt || '');
-          const isSelected = selected === optStr;
-          return (
-            <button key={optStr + idx} onClick={() => handleSelect(optStr)} disabled={isSubmitting} style={{
-              display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 14,
-              border: "2px solid " + (isSelected ? T.brand : T.g[200]), background: isSelected ? T.brandLt : T.white,
-              cursor: isSubmitting ? "not-allowed" : "pointer", textAlign: "left",
-              opacity: isSubmitting && !isSelected ? 0.5 : 1,
-            }}>
-              <span style={{ fontSize: 20 }}>{optStr.includes('Single') ? '📦' : '📦📦'}</span>
-              <span style={{ flex: 1, fontSize: 14, fontWeight: isSelected ? 700 : 500, color: isSelected ? T.brand : T.dark }}>{optStr}</span>
-              {isSelected && <div style={{ width: 20, height: 20, borderRadius: "50%", background: T.brand, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                {isSubmitting ? <div style={{ width: 12, height: 12, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin .6s linear infinite" }} /> : <span style={{ color: "#fff", fontSize: 11 }}>✓</span>}
-              </div>}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
-const WeeklyPlanReview = ({ data, onConfirm }) => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // DEFENSIVE: Ensure days is always an array
-  let days = data?.days || data?.meals || [];
-  if (!Array.isArray(days)) {
-    if (typeof days === 'object' && days !== null) {
-      days = Object.values(days);
-    } else {
-      days = [];
-    }
-  }
-  
-  const handleConfirm = () => {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    onConfirm("Confirm weekly plan");
-  };
-  
-  return (
-    <div className="si" style={{ marginTop: 8 }}>
-      <div style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m }}>
-        <p style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 12 }}>Your Weekly Plan</p>
-        {(Array.isArray(days) ? days : []).map((day, i) => (
-          <div key={i} style={{ padding: "10px 0", borderBottom: i < (Array.isArray(days) ? days : []).length - 1 ? "1px solid " + T.g[100] : "none" }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: T.dark, marginBottom: 4 }}>{day?.day || day?.meal_label || `Day ${i + 1}`}</p>
-            <p style={{ fontSize: 11, color: T.g[500] }}>{(Array.isArray(day?.products) ? day.products : []).join(', ') || day?.summary || 'Protein portions planned'}</p>
-          </div>
-        ))}
-      </div>
-      <Btn onClick={handleConfirm} full disabled={isSubmitting} loading={isSubmitting} style={{ marginTop: 16 }}>
-        {isSubmitting ? "Confirming..." : "Confirm Plan →"}
-      </Btn>
-    </div>
-  );
-};
-
-const CartPreview = ({ data, onConfirm }) => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // DEFENSIVE: Ensure cart is always an array
-  let cart = data?.cart || data?.items || [];
-  if (!Array.isArray(cart)) {
-    if (typeof cart === 'object' && cart !== null) {
-      cart = Object.values(cart);
-    } else {
-      cart = [];
-    }
-  }
-  
-  const total = data?.total_cart_price || data?.total || 0;
-  
-  const handleConfirm = () => {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    onConfirm("Finalize cart");
-  };
-  
-  return (
-    <div className="si" style={{ marginTop: 8 }}>
-      <div style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <p style={{ fontSize: 13, fontWeight: 700, color: T.dark }}>Cart Preview</p>
-          <span style={{ fontSize: 16, fontWeight: 800, color: T.brand, fontFamily: mono }}>₹{total.toLocaleString()}</span>
-        </div>
-        {(Array.isArray(cart) ? cart : []).map((item, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: i < (Array.isArray(cart) ? cart : []).length - 1 ? "1px solid " + T.g[100] : "none" }}>
-            <div style={{ width: 40, height: 40, borderRadius: 8, background: T.g[100], overflow: "hidden", flexShrink: 0 }}>
-              {item?.image_url ? <img src={item.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🥩</div>}
-            </div>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 12, fontWeight: 600, color: T.dark }}>{item?.product_name || 'Product'}</p>
-              <p style={{ fontSize: 10, color: T.g[500] }}>{item?.pack_size_label || ''} x {item?.packs_needed || 1}</p>
-            </div>
-            <span style={{ fontSize: 13, fontWeight: 700, color: T.brand, fontFamily: mono }}>₹{item?.total_price || item?.price || 0}</span>
-          </div>
-        ))}
-      </div>
-      <Btn onClick={handleConfirm} full disabled={isSubmitting} loading={isSubmitting} style={{ marginTop: 16 }}>
-        {isSubmitting ? "Finalizing..." : "Finalize Order →"}
-      </Btn>
-    </div>
-  );
-};
-
+// FinalCart is kept as a standalone view for legacy support
 const FinalCart = ({ data }) => {
   // DEFENSIVE: Ensure cart is always an array
   let cart = data?.cart || [];
@@ -1765,14 +1494,17 @@ const FinalCart = ({ data }) => {
   }
   
   const total = data?.total_cart_price || 0;
-  const perDay = data?.price_per_day || 0;
+  const perDay = data?.price_per_day || (cart.length > 0 ? Math.round(total / 7) : 0);
+  const deliverySlot = data?.delivery_slot || '';
+  
   return (
     <div style={{ minHeight: "100vh", background: T.bg }}>
-      <div style={{ background: "linear-gradient(150deg, " + T.dark + ", " + T.charcoal + ")", padding: "20px 20px 44px", borderRadius: "0 0 24px 24px" }}>
+      <div style={{ background: "linear-gradient(150deg, " + T.green + ", #34D399)", padding: "20px 20px 44px", borderRadius: "0 0 24px 24px" }}>
         <JourneyTracker steps={STEPS} current={5} />
+        {deliverySlot && <p style={{ fontSize: 11, color: "rgba(255,255,255,0.8)", textAlign: "center", marginBottom: 8 }}>Delivery: {deliverySlot}</p>}
         <div style={{ marginTop: 14, display: "flex", justifyContent: "space-between" }}>
-          <div><p style={{ fontSize: 10, color: T.g[400], textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700, marginBottom: 3 }}>Weekly Total</p><span style={{ fontSize: 28, fontWeight: 800, color: "#fff", fontFamily: mono }}>{"₹" + total.toLocaleString()}</span></div>
-          <div style={{ textAlign: "right" }}><p style={{ fontSize: 10, color: T.g[400], textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700, marginBottom: 3 }}>Per Day</p><span style={{ fontSize: 28, fontWeight: 800, color: T.green, fontFamily: mono }}>{"₹" + perDay}</span></div>
+          <div><p style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700, marginBottom: 3 }}>Weekly Total</p><span style={{ fontSize: 28, fontWeight: 800, color: "#fff", fontFamily: mono }}>{"₹" + total.toLocaleString()}</span></div>
+          <div style={{ textAlign: "right" }}><p style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700, marginBottom: 3 }}>Per Day</p><span style={{ fontSize: 28, fontWeight: 800, color: "#fff", fontFamily: mono }}>{"₹" + perDay}</span></div>
         </div>
       </div>
       <div style={{ padding: "0 14px", marginTop: -22 }}>
@@ -1783,9 +1515,9 @@ const FinalCart = ({ data }) => {
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <h4 style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 2, lineHeight: 1.3 }}>{item?.product_name || 'Product'}</h4>
-              <p style={{ fontSize: 11, color: T.g[500], marginBottom: 5 }}>{(item?.pack_size_label || '') + " x " + (item?.packs_needed || 1)}</p>
+              <p style={{ fontSize: 11, color: T.g[500], marginBottom: 5 }}>{(item?.pack_size_label || '') + " × " + (item?.packs_needed || 1)}</p>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 16, fontWeight: 800, color: T.brand, fontFamily: mono }}>{"₹" + (item?.total_price || 0)}</span>
+                <span style={{ fontSize: 16, fontWeight: 800, color: T.brand, fontFamily: mono }}>{"₹" + (item?.total_price || item?.price || 0)}</span>
                 {item?.product_page_url && <a href={item.product_page_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, fontWeight: 700, color: T.brand, textDecoration: "none", padding: "2px 8px", borderRadius: T.r.full, background: T.brandLt }}>View on Licious</a>}
               </div>
             </div>
@@ -1795,7 +1527,7 @@ const FinalCart = ({ data }) => {
       </div>
       <div style={{ padding: "20px 20px 36px" }}>
         <div style={{ padding: 14, background: T.greenLt, borderRadius: T.r.m, marginBottom: 12, textAlign: "center" }}>
-          <p style={{ fontSize: 13, color: T.green, fontWeight: 700 }}>Your weekly protein supply is ready!</p>
+          <p style={{ fontSize: 13, color: T.green, fontWeight: 700 }}>🎉 Your weekly protein supply is ready!</p>
           <p style={{ fontSize: 12, color: T.g[500], marginTop: 3 }}>Open each product on Licious to add to cart</p>
         </div>
         <Btn onClick={() => window.location.reload()} v="secondary" full>Start Over</Btn>
@@ -1829,16 +1561,10 @@ export default function App() {
     setScreen("meals");
   };
   
-  // Handler for when Agent 2 (Meal Planning) completes
+  // Handler for when meal planning completes (now includes order_confirmed)
   const handleMealPlanningComplete = (data) => {
-    // Agent 2 done → move to Agent 3 (Weekly Order)
-    setScreen("weekly");
-  };
-  
-  // Handler for when Agent 3 (Weekly Order) completes
-  const handleWeeklyOrderComplete = (data) => {
-    // Agent 3 done → show Final Cart with Agent 3's data
-    setCartData(data);
+    // Flow complete: order_confirmed received from merged Agent 2+3
+    setCartData(data?.ui_data || data);
     setScreen("cart");
   };
 
@@ -1852,7 +1578,6 @@ export default function App() {
         {screen === "onboarding" && <Onboarding sessionId={sessionId} onComplete={d => { setUserData(d); setScreen("results"); }} onRestart={handleRestart} />}
         {screen === "results" && <Results data={userData} onContinue={() => setScreen("meals")} />}
         {screen === "meals" && <MealPlanningWizard sessionId={sessionId} onComplete={handleMealPlanningComplete} onRestart={handleRestart} />}
-        {screen === "weekly" && <WeeklyOrderWizard sessionId={sessionId} onComplete={handleWeeklyOrderComplete} onRestart={handleRestart} />}
         {screen === "cart" && <FinalCart data={cartData} />}
       </Shell>
     </>
