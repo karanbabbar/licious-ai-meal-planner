@@ -458,13 +458,24 @@ const DistributionSetup = ({ data, onSelect }) => {
   const [sel, setSel] = useState(null);
   const [supplement, setSupplement] = useState(false);
   const [supplementGrams, setSupplementGrams] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Use fallback calculation if API returns 0 values
+  const getDistributionValues = (d) => {
+    if (d.breakfast > 0 || d.lunch > 0 || d.dinner > 0) {
+      return [d.breakfast || 0, d.lunch || 0, d.dinner || 0];
+    }
+    // Fallback: calculate locally
+    const calculated = calculateDistribution(d.label, data.protein_target);
+    return [calculated.breakfast, calculated.lunch, calculated.dinner];
+  };
   
   return (
     <div className="si" style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
       <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Do you take protein supplements?</p>
       <div style={{ display: "flex", gap: 8, marginBottom: supplement ? 12 : 20 }}>
-        <button onClick={() => setSupplement(false)} style={{ flex: 1, padding: "11px 14px", borderRadius: 12, border: "2px solid " + (!supplement ? T.brand : T.g[200]), background: !supplement ? T.brandLt : T.white, color: !supplement ? T.brand : T.g[600], fontSize: 13, fontWeight: !supplement ? 700 : 500, cursor: "pointer" }}>No supplements</button>
-        <button onClick={() => setSupplement(true)} style={{ flex: 1, padding: "11px 14px", borderRadius: 12, border: "2px solid " + (supplement ? T.brand : T.g[200]), background: supplement ? T.brandLt : T.white, color: supplement ? T.brand : T.g[600], fontSize: 13, fontWeight: supplement ? 700 : 500, cursor: "pointer" }}>Yes, I take</button>
+        <button onClick={() => setSupplement(false)} disabled={isSubmitting} style={{ flex: 1, padding: "11px 14px", borderRadius: 12, border: "2px solid " + (!supplement ? T.brand : T.g[200]), background: !supplement ? T.brandLt : T.white, color: !supplement ? T.brand : T.g[600], fontSize: 13, fontWeight: !supplement ? 700 : 500, cursor: isSubmitting ? "not-allowed" : "pointer", opacity: isSubmitting ? 0.5 : 1 }}>No supplements</button>
+        <button onClick={() => setSupplement(true)} disabled={isSubmitting} style={{ flex: 1, padding: "11px 14px", borderRadius: 12, border: "2px solid " + (supplement ? T.brand : T.g[200]), background: supplement ? T.brandLt : T.white, color: supplement ? T.brand : T.g[600], fontSize: 13, fontWeight: supplement ? 700 : 500, cursor: isSubmitting ? "not-allowed" : "pointer", opacity: isSubmitting ? 0.5 : 1 }}>Yes, I take</button>
       </div>
       
       {supplement && (
@@ -477,7 +488,8 @@ const DistributionSetup = ({ data, onSelect }) => {
             placeholder="e.g. 30" 
             value={supplementGrams} 
             onChange={e => setSupplementGrams(e.target.value)}
-            style={{ width: "100%", padding: "12px 14px", border: "2px solid " + T.g[200], borderRadius: 14, fontSize: 16, fontWeight: 600, background: T.white, color: T.dark }}
+            disabled={isSubmitting}
+            style={{ width: "100%", padding: "12px 14px", border: "2px solid " + T.g[200], borderRadius: 14, fontSize: 16, fontWeight: 600, background: T.white, color: T.dark, opacity: isSubmitting ? 0.5 : 1 }}
           />
         </div>
       )}
@@ -487,11 +499,13 @@ const DistributionSetup = ({ data, onSelect }) => {
         {(data.distributions || []).map(d => {
           const colors = [T.brand, T.green, T.blue];
           const meals = ["Bfast", "Lunch", "Dinner"];
-          const values = [d.breakfast || 0, d.lunch || 0, d.dinner || 0];
+          const values = getDistributionValues(d);
           const isSelected = sel === d.label;
           
           const handleSelect = () => {
+            if (isSubmitting) return;
             setSel(d.label);
+            setIsSubmitting(true);
             const msg = supplement && supplementGrams 
               ? `I take ${supplementGrams}g of supplement protein daily, ${d.label}, confirm`
               : `No supplements, ${d.label}, confirm`;
@@ -499,10 +513,11 @@ const DistributionSetup = ({ data, onSelect }) => {
           };
           
           return (
-            <button key={d.label} onClick={handleSelect} style={{
+            <button key={d.label} onClick={handleSelect} disabled={isSubmitting} style={{
               display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 14,
               border: "2px solid " + (isSelected ? T.brand : T.g[200]), background: isSelected ? T.brandLt : T.white,
-              cursor: "pointer", textAlign: "left",
+              cursor: isSubmitting ? "not-allowed" : "pointer", textAlign: "left",
+              opacity: isSubmitting && !isSelected ? 0.5 : 1,
             }}>
               <span style={{ fontSize: 22, flexShrink: 0 }}>{d.icon}</span>
               <div style={{ flex: 1 }}>
@@ -518,7 +533,7 @@ const DistributionSetup = ({ data, onSelect }) => {
                   ))}
                 </div>
               </div>
-              {isSelected && <div style={{ width: 20, height: 20, borderRadius: "50%", background: T.brand, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><span style={{ color: "#fff", fontSize: 11 }}>✓</span></div>}
+              {isSelected && <div style={{ width: 20, height: 20, borderRadius: "50%", background: T.brand, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{isSubmitting ? <div style={{ width: 12, height: 12, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin .6s linear infinite" }} /> : <span style={{ color: "#fff", fontSize: 11 }}>✓</span>}</div>}
             </button>
           );
         })}
