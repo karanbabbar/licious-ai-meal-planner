@@ -1237,9 +1237,9 @@ const MealPlanningWizard = ({ sessionId, onComplete, onRestart }) => {
       </div>
       <JourneyTracker steps={STEPS} current={3} />
       <div className="no-sb" style={{ flex: 1, overflow: "auto", padding: "12px 14px" }}>
-        {msgs.map((m, i) => {
-          if (m.role === "bot") {
-            const isLatestBot = i === msgs.length - 1 || (i === msgs.length - 2 && loading);
+        {(Array.isArray(msgs) ? msgs : []).map((m, i) => {
+          if (m?.role === "bot") {
+            const isLatestBot = i === (Array.isArray(msgs) ? msgs : []).length - 1 || (i === (Array.isArray(msgs) ? msgs : []).length - 2 && loading);
             
             // Show collapsed badge for old bot messages with ui_type
             if (!isLatestBot && m.data?.ui_type) {
