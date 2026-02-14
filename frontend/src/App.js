@@ -168,6 +168,20 @@ const Homepage = ({ onStart }) => (
 const MacroFork = ({ onKnowIt, onCalculate, onRestart }) => {
   const [calories, setCalories] = useState("");
   const [protein, setProtein] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+  
+  const handleKnowIt = async () => {
+    setLoading(true);
+    setError(false);
+    try {
+      await onKnowIt(calories, protein);
+    } catch (err) {
+      console.error(err);
+      setError(true);
+    }
+    setLoading(false);
+  };
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: T.white }}>
@@ -194,13 +208,20 @@ const MacroFork = ({ onKnowIt, onCalculate, onRestart }) => {
             <p style={{ fontSize: 11, color: T.g[600], lineHeight: 1.4 }}>If you take protein supplements, deduct that amount. Enter only protein you need from food.</p>
           </div>
         </div>
+        
+        {error && (
+          <div style={{ padding: "12px 16px", background: T.brandLt, borderRadius: T.r.m, border: "1px solid " + T.brand + "30", display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 18 }}>⚠️</span>
+            <span style={{ fontSize: 13, color: T.brand, fontWeight: 600 }}>Something went wrong. Tap to retry.</span>
+          </div>
+        )}
       </div>
 
       <div style={{ padding: "16px 24px 32px", display: "flex", flexDirection: "column", gap: 10 }}>
-        <Btn onClick={() => onKnowIt(calories, protein)} full disabled={!calories || !protein} style={{ fontSize: 16 }}>
-          Yes, I know it! <span style={{ fontSize: 18 }}>→</span>
+        <Btn onClick={handleKnowIt} full disabled={!calories || !protein} loading={loading} style={{ fontSize: 16 }}>
+          {error ? "Tap to retry ↻" : "Yes, I know it!"} {!error && <span style={{ fontSize: 18 }}>→</span>}
         </Btn>
-        <Btn onClick={() => onCalculate(calories, protein)} v="secondary" full style={{ fontSize: 15 }}>
+        <Btn onClick={() => onCalculate(calories, protein)} v="secondary" full style={{ fontSize: 15 }} disabled={loading}>
           Help me calculate 🧮
         </Btn>
       </div>
