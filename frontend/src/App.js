@@ -395,18 +395,35 @@ const Results = ({ data, onContinue }) => {
 
 // VISUAL MEAL PLANNING COMPONENTS (backend-driven)
 
+// Helper: Calculate distribution as fallback when API returns zeros
+const calculateDistribution = (label, target) => {
+  const t = target || 150;
+  switch(label) {
+    case 'Equal': return { breakfast: Math.floor(t/3), lunch: Math.floor(t/3), dinner: t - 2*Math.floor(t/3) };
+    case 'Heavy Breakfast': return { breakfast: Math.round(t*0.4), lunch: Math.round(t*0.3), dinner: t - Math.round(t*0.4) - Math.round(t*0.3) };
+    case 'Heavy Lunch': return { breakfast: Math.round(t*0.3), lunch: Math.round(t*0.4), dinner: t - Math.round(t*0.3) - Math.round(t*0.4) };
+    case 'Heavy Dinner': return { breakfast: Math.round(t*0.3), lunch: Math.round(t*0.3), dinner: t - 2*Math.round(t*0.3) };
+    default: return { breakfast: Math.floor(t/3), lunch: Math.floor(t/3), dinner: t - 2*Math.floor(t/3) };
+  }
+};
+
 // Collapsed Badge for previous responses
 const CollapsedBadge = ({ type, data, fullData }) => {
   let text = "";
   switch (type) {
     case 'budget_setup':
-      // BUG FIX: Read from budget.distribution or ui_data
-      const dist = fullData?.budget?.distribution;
-      const label = data?.distributions?.[0]?.label || 'Distribution';
-      if (dist && dist.breakfast !== undefined) {
-        text = `✓ ${label} — ${dist.breakfast}g / ${dist.lunch}g / ${dist.dinner}g`;
+      // Try multiple sources for distribution values
+      const dist = fullData?.budget?.distribution || data?.budget?.distribution;
+      const selectedLabel = fullData?.budget?.selected_distribution || data?.selected_distribution || data?.distributions?.[0]?.label || 'Distribution';
+      const proteinTarget = fullData?.budget?.meal_budget_g || data?.protein_target || 150;
+      
+      // Check if we have valid (non-zero) values
+      if (dist && dist.breakfast > 0) {
+        text = `✓ ${selectedLabel} — ${dist.breakfast}g / ${dist.lunch}g / ${dist.dinner}g`;
       } else {
-        text = "✓ Distribution confirmed";
+        // Fallback: Calculate distribution locally
+        const calculated = calculateDistribution(selectedLabel, proteinTarget);
+        text = `✓ ${selectedLabel} — ${calculated.breakfast}g / ${calculated.lunch}g / ${calculated.dinner}g`;
       }
       break;
     case 'source_select':
