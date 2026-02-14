@@ -589,13 +589,13 @@ const DistributionSetup = ({ data, onSelect }) => {
         </div>
       )}
       
-      <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>How to split your {data.protein_target}g protein?</p>
+      <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>How to split your {proteinTarget}g protein?</p>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        {distributions.map(d => {
+        {(Array.isArray(distributions) ? distributions : []).map((d, idx) => {
           const colors = [T.brand, T.green, T.blue];
           const meals = ["Bfast", "Lunch", "Dinner"];
-          const values = getDistributionValues(d);
-          const isSelected = sel === d.label;
+          const values = getDistributionValues(d || {});
+          const isSelected = sel === (d?.label || idx);
           
           const handleSelect = () => {
             if (isSubmitting) return;
