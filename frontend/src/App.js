@@ -649,8 +649,12 @@ const ProductCardGrid = ({ data, onSelect }) => {
   const [submitted, setSubmitted] = useState(false);
   const mealTarget = data.protein_target || 50;
   
-  // Group products by category
-  const productsByCategory = (data.products || []).reduce((acc, p) => {
+  // Filter out products with price 0 (already purchased)
+  const selectableProducts = (data.products || []).filter(p => p.price > 0);
+  const alreadyOrderedProducts = (data.products || []).filter(p => p.price === 0);
+  
+  // Group selectable products by category
+  const productsByCategory = selectableProducts.reduce((acc, p) => {
     const cat = p.category || 'other';
     if (!acc[cat]) acc[cat] = [];
     acc[cat].push(p);
@@ -659,7 +663,7 @@ const ProductCardGrid = ({ data, onSelect }) => {
   
   // Calculate rough protein estimate
   const totalSelectedProtein = selected.reduce((sum, productName) => {
-    const product = (data.products || []).find(p => p.product_name === productName);
+    const product = selectableProducts.find(p => p.product_name === productName);
     if (!product) return sum;
     if (product.category === 'eggs') return sum + 6.5 * 4; // rough: 4 eggs
     return sum + (product.protein_per_100g || 20) * 1.2; // rough: 120g portion
@@ -668,8 +672,8 @@ const ProductCardGrid = ({ data, onSelect }) => {
   const canSelectMore = totalSelectedProtein < mealTarget * 1.3;
   
   // Get selected sources for reminder
-  const selectedSources = [...new Set((data.products || []).filter(p => selected.includes(p.product_name)).map(p => p.category))];
-  const allSources = [...new Set((data.products || []).map(p => p.category))];
+  const selectedSources = [...new Set(selectableProducts.filter(p => selected.includes(p.product_name)).map(p => p.category))];
+  const allSources = [...new Set(selectableProducts.map(p => p.category))];
   const sourcesWithoutSelection = allSources.filter(s => !selectedSources.includes(s));
   
   // Handle product selection with SWAP logic (max 1 per category)
@@ -686,7 +690,7 @@ const ProductCardGrid = ({ data, onSelect }) => {
       } else {
         // SWAP: Remove any existing selection from same category, then add new
         const filtered = prev.filter(n => {
-          const p = (data.products || []).find(prod => prod.product_name === n);
+          const p = selectableProducts.find(prod => prod.product_name === n);
           return p?.category !== category;
         });
         return [...filtered, productName];
