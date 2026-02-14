@@ -1400,7 +1400,7 @@ const MealPlanningWizard = ({ sessionId, onComplete, onRestart }) => {
     if (lastMessage) {
       send(lastMessage);
     } else {
-      send("Start planning my protein sources");
+      send({ message: "start" });
     }
   };
 
