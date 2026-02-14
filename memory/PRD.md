@@ -75,7 +75,6 @@ Build a React mobile-first web app called "Protein Planner v2" - a guided wizard
 - None currently
 
 ### P3 - Future/Backlog
-- Error handling improvements for API failures
 - Offline support / graceful degradation
 - Analytics integration
 - Performance optimization for large product lists
