@@ -870,20 +870,20 @@ const ProductCardGrid = ({ data, onSelect }) => {
       <div key={category} style={{ marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: T.dark }}>
-            {categoryIcons[category.toLowerCase()] || '🥩'} {categoryLabels[category.toLowerCase()] || category}
+            {categoryIcons[(category || '').toLowerCase()] || '🥩'} {categoryLabels[(category || '').toLowerCase()] || category}
           </span>
           <span style={{ fontSize: 10, fontWeight: 700, color: T.brand, background: T.brandLt, padding: "3px 8px", borderRadius: 99 }}>
             Pick 1
           </span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-          {products.map((p, i) => {
-            const productName = p.product_name || p.name;
-            const productCategory = p.category || p.source || 'other';
+          {(Array.isArray(products) ? products : []).map((p, i) => {
+            const productName = p?.product_name || p?.name || 'Product';
+            const productCategory = p?.category || p?.source || 'other';
             const isSelected = selected.includes(productName);
-            const proteinDisplay = productCategory.toLowerCase() === 'eggs'
+            const proteinDisplay = (productCategory || '').toLowerCase() === 'eggs'
               ? '6.5g/egg'
-              : p.protein_per_100g 
+              : p?.protein_per_100g 
                 ? `${p.protein_per_100g}g/100g` 
                 : '';
             
@@ -895,7 +895,7 @@ const ProductCardGrid = ({ data, onSelect }) => {
                 opacity: submitted ? 0.7 : 1,
               }}>
                 <div style={{ width: "100%", aspectRatio: "1", borderRadius: 10, background: T.g[100], overflow: "hidden", marginBottom: 8, position: "relative" }}>
-                  {p.image_url ? <img src={p.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => e.target.style.display = "none"} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🥩</div>}
+                  {p?.image_url ? <img src={p.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => e.target.style.display = "none"} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🥩</div>}
                   {isSelected && (
                     <div style={{ position: "absolute", top: 6, right: 6, width: 22, height: 22, borderRadius: "50%", background: T.brand, display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <span style={{ color: "#fff", fontSize: 12, fontWeight: 800 }}>✓</span>
@@ -904,14 +904,14 @@ const ProductCardGrid = ({ data, onSelect }) => {
                 </div>
                 <p style={{ fontSize: 11, fontWeight: 700, color: T.dark, lineHeight: 1.3, marginBottom: 4, minHeight: 28 }}>{productName}</p>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 14, fontWeight: 800, color: T.brand, fontFamily: mono }}>₹{p.price || 0}</span>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: T.brand, fontFamily: mono }}>₹{p?.price || 0}</span>
                   {proteinDisplay && (
                     <span style={{ fontSize: 9, fontWeight: 700, color: T.green, background: T.greenLt, padding: "2px 6px", borderRadius: 99 }}>
                       {proteinDisplay}
                     </span>
                   )}
                 </div>
-                <p style={{ fontSize: 10, color: T.g[400], marginTop: 3 }}>{p.pack_size_label || p.pack_size || ''}</p>
+                <p style={{ fontSize: 10, color: T.g[400], marginTop: 3 }}>{p?.pack_size_label || p?.pack_size || ''}</p>
               </button>
             );
           })}
