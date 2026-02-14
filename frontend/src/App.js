@@ -1445,6 +1445,16 @@ const DeliverySelect = ({ data, onSelect }) => {
 const WeeklyPlanReview = ({ data, onConfirm }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // DEFENSIVE: Ensure days is always an array
+  let days = data?.days || data?.meals || [];
+  if (!Array.isArray(days)) {
+    if (typeof days === 'object' && days !== null) {
+      days = Object.values(days);
+    } else {
+      days = [];
+    }
+  }
+  
   const handleConfirm = () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
@@ -1455,10 +1465,10 @@ const WeeklyPlanReview = ({ data, onConfirm }) => {
     <div className="si" style={{ marginTop: 8 }}>
       <div style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m }}>
         <p style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 12 }}>Your Weekly Plan</p>
-        {(data.days || data.meals || []).map((day, i) => (
-          <div key={i} style={{ padding: "10px 0", borderBottom: i < (data.days || data.meals || []).length - 1 ? "1px solid " + T.g[100] : "none" }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: T.dark, marginBottom: 4 }}>{day.day || day.meal_label || `Day ${i + 1}`}</p>
-            <p style={{ fontSize: 11, color: T.g[500] }}>{day.products?.join(', ') || day.summary || 'Protein portions planned'}</p>
+        {(Array.isArray(days) ? days : []).map((day, i) => (
+          <div key={i} style={{ padding: "10px 0", borderBottom: i < (Array.isArray(days) ? days : []).length - 1 ? "1px solid " + T.g[100] : "none" }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: T.dark, marginBottom: 4 }}>{day?.day || day?.meal_label || `Day ${i + 1}`}</p>
+            <p style={{ fontSize: 11, color: T.g[500] }}>{(Array.isArray(day?.products) ? day.products : []).join(', ') || day?.summary || 'Protein portions planned'}</p>
           </div>
         ))}
       </div>
