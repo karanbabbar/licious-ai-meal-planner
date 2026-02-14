@@ -1471,8 +1471,18 @@ const WeeklyPlanReview = ({ data, onConfirm }) => {
 
 const CartPreview = ({ data, onConfirm }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const cart = data.cart || data.items || [];
-  const total = data.total_cart_price || data.total || 0;
+  
+  // DEFENSIVE: Ensure cart is always an array
+  let cart = data?.cart || data?.items || [];
+  if (!Array.isArray(cart)) {
+    if (typeof cart === 'object' && cart !== null) {
+      cart = Object.values(cart);
+    } else {
+      cart = [];
+    }
+  }
+  
+  const total = data?.total_cart_price || data?.total || 0;
   
   const handleConfirm = () => {
     if (isSubmitting) return;
@@ -1487,16 +1497,16 @@ const CartPreview = ({ data, onConfirm }) => {
           <p style={{ fontSize: 13, fontWeight: 700, color: T.dark }}>Cart Preview</p>
           <span style={{ fontSize: 16, fontWeight: 800, color: T.brand, fontFamily: mono }}>₹{total.toLocaleString()}</span>
         </div>
-        {cart.map((item, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: i < cart.length - 1 ? "1px solid " + T.g[100] : "none" }}>
+        {(Array.isArray(cart) ? cart : []).map((item, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: i < (Array.isArray(cart) ? cart : []).length - 1 ? "1px solid " + T.g[100] : "none" }}>
             <div style={{ width: 40, height: 40, borderRadius: 8, background: T.g[100], overflow: "hidden", flexShrink: 0 }}>
-              {item.image_url ? <img src={item.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🥩</div>}
+              {item?.image_url ? <img src={item.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🥩</div>}
             </div>
             <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 12, fontWeight: 600, color: T.dark }}>{item.product_name}</p>
-              <p style={{ fontSize: 10, color: T.g[500] }}>{item.pack_size_label} x {item.packs_needed || 1}</p>
+              <p style={{ fontSize: 12, fontWeight: 600, color: T.dark }}>{item?.product_name || 'Product'}</p>
+              <p style={{ fontSize: 10, color: T.g[500] }}>{item?.pack_size_label || ''} x {item?.packs_needed || 1}</p>
             </div>
-            <span style={{ fontSize: 13, fontWeight: 700, color: T.brand, fontFamily: mono }}>₹{item.total_price || item.price}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: T.brand, fontFamily: mono }}>₹{item?.total_price || item?.price || 0}</span>
           </div>
         ))}
       </div>
