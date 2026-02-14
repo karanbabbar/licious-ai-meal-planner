@@ -742,7 +742,8 @@ const CutChips = ({ data, onSelect }) => {
     if (isSubmitting) return;
     setSelected(cut);
     setIsSubmitting(true);
-    onSelect(cut);
+    // Send structured JSON instead of text
+    onSelect({ cut: cut });
   };
   
   // Don't render if no cuts available
