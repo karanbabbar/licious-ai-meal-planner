@@ -940,6 +940,11 @@ const PortionConfirmCard = ({ data, onConfirm }) => {
 };
 
 const MealBadge = ({ data }) => {
+  // Defensive: handle alternate field names from backend
+  const mealLabel = data.meal_label || data.meal || "Meal";
+  const totalProtein = data.total_protein || data.protein || 0;
+  const runningPrice = data.running_price || data.price || data.total_price || 0;
+  
   return (
     <div className="si" style={{ padding: "12px 16px", background: T.greenLt, borderRadius: 14, border: "1px solid " + T.green + "20", display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -947,11 +952,11 @@ const MealBadge = ({ data }) => {
           <span style={{ color: "#fff", fontSize: 13 }}>✓</span>
         </div>
         <div>
-          <span style={{ fontSize: 13, fontWeight: 700, color: T.green }}>{data.meal_label} locked</span>
-          <span style={{ fontSize: 11, color: T.g[500], display: "block" }}>{data.total_protein}g protein</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: T.green }}>{mealLabel} locked</span>
+          <span style={{ fontSize: 11, color: T.g[500], display: "block" }}>{Math.round(totalProtein * 10) / 10}g protein</span>
         </div>
       </div>
-      <span style={{ fontSize: 15, fontWeight: 800, color: T.dark, fontFamily: mono }}>₹{data.running_price}</span>
+      <span style={{ fontSize: 15, fontWeight: 800, color: T.dark, fontFamily: mono }}>₹{runningPrice}</span>
     </div>
   );
 };
