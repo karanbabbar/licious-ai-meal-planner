@@ -766,7 +766,14 @@ const MealPlanningWizard = ({ sessionId, onComplete, onRestart }) => {
       <div className="no-sb" style={{ flex: 1, overflow: "auto", padding: "12px 14px" }}>
         {msgs.map((m, i) => {
           if (m.role === "bot") {
-            const ui = renderUI(m);
+            const isLatestBot = i === msgs.length - 1 || (i === msgs.length - 2 && loading);
+            const ui = isLatestBot ? renderUI(m) : null;
+            
+            // Show collapsed badge for old bot messages with ui_type
+            if (!isLatestBot && m.data?.ui_type) {
+              return <CollapsedBadge key={i} type={m.data.ui_type} data={m.data.ui_data || {}} />;
+            }
+            
             return (
               <div key={i} style={{ marginBottom: 12 }}>
                 <p style={{ fontSize: 12, color: T.g[400], marginBottom: 6, lineHeight: 1.4 }}>{m.text}</p>
