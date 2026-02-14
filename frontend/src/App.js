@@ -1115,6 +1115,202 @@ const MealBadge = ({ data, onEdit }) => {
   );
 };
 
+// NEW: Weekly Summary component (shows 7-day plan + cart preview)
+const WeeklySummary = ({ data, onContinue }) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // DEFENSIVE: Ensure arrays
+  let weeklyPlan = data?.weekly_plan || [];
+  if (!Array.isArray(weeklyPlan)) {
+    weeklyPlan = typeof weeklyPlan === 'object' ? Object.values(weeklyPlan) : [];
+  }
+  
+  let cart = data?.cart || [];
+  if (!Array.isArray(cart)) {
+    cart = typeof cart === 'object' ? Object.values(cart) : [];
+  }
+  
+  const total = data?.total_cart_price || 0;
+  
+  const handleContinue = () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    onContinue({ action: "confirm_weekly_summary" });
+  };
+  
+  return (
+    <div className="si" style={{ marginTop: 8 }}>
+      {/* Weekly Plan */}
+      <div style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginBottom: 12 }}>
+        <p style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 18 }}>📅</span> Your 7-Day Plan
+        </p>
+        {(Array.isArray(weeklyPlan) ? weeklyPlan : []).map((day, i) => (
+          <div key={i} style={{ padding: "10px 0", borderBottom: i < weeklyPlan.length - 1 ? "1px solid " + T.g[100] : "none" }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: T.dark, marginBottom: 4 }}>{day?.day || day?.label || `Day ${i + 1}`}</p>
+            <p style={{ fontSize: 11, color: T.g[500] }}>
+              {(Array.isArray(day?.meals) ? day.meals : []).map(m => m?.meal_label || m).join(' • ') || day?.summary || 'Planned'}
+            </p>
+          </div>
+        ))}
+      </div>
+      
+      {/* Cart Preview */}
+      <div style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <p style={{ fontSize: 13, fontWeight: 700, color: T.dark, display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 18 }}>🛒</span> Cart Preview
+          </p>
+          <span style={{ fontSize: 16, fontWeight: 800, color: T.brand, fontFamily: mono }}>₹{total.toLocaleString()}</span>
+        </div>
+        {(Array.isArray(cart) ? cart : []).map((item, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: i < cart.length - 1 ? "1px solid " + T.g[100] : "none" }}>
+            <div style={{ width: 40, height: 40, borderRadius: 8, background: T.g[100], overflow: "hidden", flexShrink: 0 }}>
+              {item?.image_url ? <img src={item.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🥩</div>}
+            </div>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 12, fontWeight: 600, color: T.dark }}>{item?.product_name || 'Product'}</p>
+              <p style={{ fontSize: 10, color: T.g[500] }}>{item?.pack_size_label || ''} × {item?.packs_needed || 1}</p>
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 700, color: T.brand, fontFamily: mono }}>₹{item?.price || item?.total_price || 0}</span>
+          </div>
+        ))}
+      </div>
+      
+      <Btn onClick={handleContinue} full disabled={isSubmitting} loading={isSubmitting} style={{ marginTop: 16 }}>
+        {isSubmitting ? "Processing..." : "Choose Delivery Slot →"}
+      </Btn>
+    </div>
+  );
+};
+
+// NEW: Time Slot Selection component (replaces old DeliverySelect)
+const TimeSlotSelect = ({ data, onSelect }) => {
+  const [selected, setSelected] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // DEFENSIVE: Ensure time_slots is always an array
+  let timeSlots = data?.time_slots || data?.options || [];
+  if (!Array.isArray(timeSlots)) {
+    if (typeof timeSlots === 'object' && timeSlots !== null) {
+      timeSlots = Object.entries(timeSlots).map(([key, val]) => 
+        typeof val === 'object' ? { value: key, ...val } : { value: key, label: val }
+      );
+    } else {
+      timeSlots = [
+        { value: 'morning', label: 'Morning (8am - 12pm)' },
+        { value: 'afternoon', label: 'Afternoon (12pm - 4pm)' },
+        { value: 'evening', label: 'Evening (4pm - 8pm)' }
+      ];
+    }
+  }
+  
+  const handleSelect = (slot) => {
+    if (isSubmitting) return;
+    const slotValue = typeof slot === 'string' ? slot : (slot?.value || slot?.label);
+    setSelected(slotValue);
+    setIsSubmitting(true);
+    // Send structured JSON
+    onSelect({ time_slot: slotValue });
+  };
+  
+  const slotIcons = { morning: '🌅', afternoon: '☀️', evening: '🌙', night: '🌙' };
+  
+  return (
+    <div className="si" style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
+      <p style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 12 }}>Choose delivery time slot</p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {(Array.isArray(timeSlots) ? timeSlots : []).map((slot, idx) => {
+          const slotValue = typeof slot === 'string' ? slot : (slot?.value || slot?.label || `slot_${idx}`);
+          const slotLabel = typeof slot === 'string' ? slot : (slot?.label || slot?.value || `Slot ${idx + 1}`);
+          const isSelected = selected === slotValue;
+          const icon = slotIcons[slotValue.toLowerCase()] || '📦';
+          
+          return (
+            <button key={slotValue + idx} onClick={() => handleSelect(slot)} disabled={isSubmitting} style={{
+              display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 14,
+              border: "2px solid " + (isSelected ? T.brand : T.g[200]), background: isSelected ? T.brandLt : T.white,
+              cursor: isSubmitting ? "not-allowed" : "pointer", textAlign: "left",
+              opacity: isSubmitting && !isSelected ? 0.5 : 1,
+            }}>
+              <span style={{ fontSize: 20 }}>{icon}</span>
+              <span style={{ flex: 1, fontSize: 14, fontWeight: isSelected ? 700 : 500, color: isSelected ? T.brand : T.dark }}>{slotLabel}</span>
+              {isSelected && <div style={{ width: 20, height: 20, borderRadius: "50%", background: T.brand, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {isSubmitting ? <div style={{ width: 12, height: 12, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin .6s linear infinite" }} /> : <span style={{ color: "#fff", fontSize: 11 }}>✓</span>}
+              </div>}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// NEW: Order Confirmed component (final state)
+const OrderConfirmed = ({ data }) => {
+  // DEFENSIVE: Ensure arrays
+  let cart = data?.cart || [];
+  if (!Array.isArray(cart)) {
+    cart = typeof cart === 'object' ? Object.values(cart) : [];
+  }
+  
+  let weeklyPlan = data?.weekly_plan || [];
+  if (!Array.isArray(weeklyPlan)) {
+    weeklyPlan = typeof weeklyPlan === 'object' ? Object.values(weeklyPlan) : [];
+  }
+  
+  const total = data?.total_cart_price || 0;
+  const deliverySlot = data?.delivery_slot || 'Scheduled';
+  const perDay = cart.length > 0 ? Math.round(total / 7) : 0;
+  
+  return (
+    <div style={{ minHeight: "100vh", background: T.bg }}>
+      {/* Success Header */}
+      <div style={{ background: "linear-gradient(150deg, " + T.green + ", #34D399)", padding: "24px 20px 48px", borderRadius: "0 0 24px 24px" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px", fontSize: 32 }}>✓</div>
+          <h2 style={{ fontSize: 20, fontWeight: 800, color: "#fff", marginBottom: 4 }}>Order Confirmed!</h2>
+          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.8)" }}>Delivery: {deliverySlot}</p>
+        </div>
+        <div style={{ marginTop: 20, display: "flex", justifyContent: "space-between" }}>
+          <div><p style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700, marginBottom: 3 }}>Weekly Total</p><span style={{ fontSize: 28, fontWeight: 800, color: "#fff", fontFamily: mono }}>₹{total.toLocaleString()}</span></div>
+          <div style={{ textAlign: "right" }}><p style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700, marginBottom: 3 }}>Per Day</p><span style={{ fontSize: 28, fontWeight: 800, color: "#fff", fontFamily: mono }}>₹{perDay}</span></div>
+        </div>
+      </div>
+      
+      {/* Cart Items */}
+      <div style={{ padding: "0 14px", marginTop: -24 }}>
+        {(Array.isArray(cart) ? cart : []).map((item, i) => (
+          <div key={i} className={"up" + Math.min(i, 4)} style={{ marginBottom: 10, background: T.white, borderRadius: T.r.l, border: "1px solid " + T.g[100], boxShadow: T.sh.m, overflow: "hidden" }}>
+            <div style={{ display: "flex", gap: 12, padding: 12 }}>
+              <div style={{ width: 68, height: 68, borderRadius: T.r.m, background: T.g[100], overflow: "hidden", flexShrink: 0 }}>
+                {item?.image_url ? <img src={item.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { e.target.style.display = "none"; }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26 }}>🥩</div>}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h4 style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 2, lineHeight: 1.3 }}>{item?.product_name || 'Product'}</h4>
+                <p style={{ fontSize: 11, color: T.g[500], marginBottom: 5 }}>{(item?.pack_size_label || '') + " × " + (item?.packs_needed || 1)}</p>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 16, fontWeight: 800, color: T.brand, fontFamily: mono }}>₹{item?.total_price || item?.price || 0}</span>
+                  {item?.product_page_url && <a href={item.product_page_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, fontWeight: 700, color: T.brand, textDecoration: "none", padding: "2px 8px", borderRadius: T.r.full, background: T.brandLt }}>View on Licious</a>}
+                </div>
+              </div>
+            </div>
+            {item?.usage_description && <div style={{ padding: "6px 12px", background: T.g[50], borderTop: "1px solid " + T.g[100], fontSize: 11, color: T.g[500], fontWeight: 500 }}>📋 {item.usage_description}</div>}
+          </div>
+        ))}
+      </div>
+      
+      {/* Success Message */}
+      <div style={{ padding: "20px 20px 36px" }}>
+        <div style={{ padding: 14, background: T.greenLt, borderRadius: T.r.m, marginBottom: 12, textAlign: "center" }}>
+          <p style={{ fontSize: 13, color: T.green, fontWeight: 700 }}>🎉 Your weekly protein supply is ready!</p>
+          <p style={{ fontSize: 11, color: T.g[600], marginTop: 4 }}>You'll receive a confirmation shortly.</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Error Retry Component
 const ErrorRetry = ({ onRetry }) => (
   <div className="si" style={{ padding: 20, background: T.white, borderRadius: 16, border: "1px solid " + T.brand + "30", boxShadow: T.sh.m, marginTop: 8, textAlign: "center" }}>
