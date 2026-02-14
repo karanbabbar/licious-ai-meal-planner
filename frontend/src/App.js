@@ -1008,11 +1008,11 @@ const PortionConfirmCard = ({ data, onConfirm }) => {
             {total >= proteinTarget ? "✓ Target met" : (Math.round(total * 10) / 10) + "/" + proteinTarget + "g"}
           </span>
         </div>
-        {portions.map((p, i) => {
-          const productName = p.product_name || p.name || "Product";
-          const proteinG = p.protein_g || p.protein || 0;
-          const quantity = p.quantity || p.qty || "";
-          const packInfo = p.pack_info || p.pack || "";
+        {(Array.isArray(portions) ? portions : []).map((p, i) => {
+          const productName = p?.product_name || p?.name || "Product";
+          const proteinG = p?.protein_g || p?.protein || 0;
+          const quantity = p?.quantity || p?.qty || "";
+          const packInfo = p?.pack_info || p?.pack || "";
           
           return (
             <div key={i} style={{ marginBottom: 10 }}>
@@ -1034,25 +1034,25 @@ const PortionConfirmCard = ({ data, onConfirm }) => {
       </div>
 
       {/* Utilization Picker */}
-      {utilizationOptions.length > 0 && (
+      {(Array.isArray(utilizationOptions) ? utilizationOptions : []).length > 0 && (
         <div style={{ padding: 14, background: T.white, borderRadius: 16, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 10 }}>
           <p style={{ fontSize: 13, fontWeight: 800, color: T.dark, marginBottom: 4 }}>Pack utilization</p>
           <p style={{ fontSize: 11, color: T.g[400], marginBottom: 12 }}>What to do with leftover portions?</p>
-          {utilizationOptions.map((item, idx) => {
-            const itemProductName = item.product_name || item.name || "Product";
-            const itemRemaining = item.remaining || item.leftover || "";
-            const itemOptions = item.options || [];
+          {(Array.isArray(utilizationOptions) ? utilizationOptions : []).map((item, idx) => {
+            const itemProductName = item?.product_name || item?.name || "Product";
+            const itemRemaining = item?.remaining || item?.leftover || "";
+            const itemOptions = Array.isArray(item?.options) ? item.options : [];
             
             return (
-              <div key={idx} style={{ marginBottom: idx < utilizationOptions.length - 1 ? 16 : 0 }}>
+              <div key={idx} style={{ marginBottom: idx < (Array.isArray(utilizationOptions) ? utilizationOptions : []).length - 1 ? 16 : 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
                   <span style={{ fontSize: 12, fontWeight: 700, color: T.dark }}>{itemProductName}</span>
                   <span style={{ fontSize: 10, fontWeight: 600, color: T.amber, background: T.amberLt, padding: "2px 6px", borderRadius: 99 }}>{itemRemaining}</span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  {itemOptions.map((opt, i) => {
-                    const optValue = typeof opt === 'string' ? opt : (opt.value || opt.label);
-                    const optLabel = typeof opt === 'string' ? opt : (opt.label || opt.value);
+                  {(Array.isArray(itemOptions) ? itemOptions : []).map((opt, i) => {
+                    const optValue = typeof opt === 'string' ? opt : (opt?.value || opt?.label || '');
+                    const optLabel = typeof opt === 'string' ? opt : (opt?.label || opt?.value || '');
                     const isActive = utilization[itemProductName] === optValue;
                     return (
                       <button key={i} onClick={() => !locked && setUtilization(p => ({ ...p, [itemProductName]: optValue }))} disabled={locked} style={{
