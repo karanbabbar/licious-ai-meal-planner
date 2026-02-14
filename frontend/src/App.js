@@ -838,14 +838,21 @@ const ProductCardGrid = ({ data, onSelect }) => {
 const PortionConfirmCard = ({ data, onConfirm }) => {
   const [utilization, setUtilization] = useState({});
   const [locked, setLocked] = useState(false);
-  const total = Math.round((data.portions || []).reduce((s, p) => s + p.protein_g, 0) * 10) / 10;
+  
+  // Defensive: handle alternate field names from backend
+  const mealLabel = data.meal_label || data.meal || "Meal";
+  const proteinTarget = data.protein_target || data.target || 50;
+  const portions = data.portions || data.items || [];
+  const utilizationOptions = data.utilization_options || data.leftover_options || [];
+  
+  const total = Math.round(portions.reduce((s, p) => s + (p.protein_g || p.protein || 0), 0) * 10) / 10;
   
   const handleConfirm = () => {
     if (locked) return;
     setLocked(true);
     // Convert utilization object to message string
     const utilizationMsg = Object.entries(utilization).map(([product, choice]) => `${product}: ${choice}`).join(", ");
-    const msg = `Lock ${data.meal_label}, utilization: ${utilizationMsg}`;
+    const msg = `Lock ${mealLabel}, utilization: ${utilizationMsg}`;
     onConfirm(msg);
   };
   
@@ -854,64 +861,79 @@ const PortionConfirmCard = ({ data, onConfirm }) => {
       {/* Portion Summary */}
       <div style={{ padding: 14, background: T.white, borderRadius: 16, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <p style={{ fontSize: 13, fontWeight: 800, color: T.dark }}>{data.meal_label} portions</p>
-          <span style={{ fontSize: 11, fontWeight: 700, color: total >= data.protein_target ? T.green : T.amber, background: total >= data.protein_target ? T.greenLt : T.amberLt, padding: "3px 8px", borderRadius: 99 }}>
-            {total >= data.protein_target ? "✓ Target met" : (Math.round(total * 10) / 10) + "/" + data.protein_target + "g"}
+          <p style={{ fontSize: 13, fontWeight: 800, color: T.dark }}>{mealLabel} portions</p>
+          <span style={{ fontSize: 11, fontWeight: 700, color: total >= proteinTarget ? T.green : T.amber, background: total >= proteinTarget ? T.greenLt : T.amberLt, padding: "3px 8px", borderRadius: 99 }}>
+            {total >= proteinTarget ? "✓ Target met" : (Math.round(total * 10) / 10) + "/" + proteinTarget + "g"}
           </span>
         </div>
-        {(data.portions || []).map((p, i) => (
-          <div key={i} style={{ marginBottom: 10 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: T.dark }}>{p.product_name} ({p.quantity})</span>
-              <span style={{ fontSize: 13, fontWeight: 800, color: T.green, fontFamily: mono }}>{(Math.round(p.protein_g * 10) / 10)}g</span>
+        {portions.map((p, i) => {
+          const productName = p.product_name || p.name || "Product";
+          const proteinG = p.protein_g || p.protein || 0;
+          const quantity = p.quantity || p.qty || "";
+          const packInfo = p.pack_info || p.pack || "";
+          
+          return (
+            <div key={i} style={{ marginBottom: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: T.dark }}>{productName} {quantity && `(${quantity})`}</span>
+                <span style={{ fontSize: 13, fontWeight: 800, color: T.green, fontFamily: mono }}>{(Math.round(proteinG * 10) / 10)}g</span>
+              </div>
+              <div style={{ height: 5, background: T.g[100], borderRadius: 3, overflow: "hidden" }}>
+                <div style={{ height: "100%", width: Math.min(100, (proteinG / proteinTarget) * 100) + "%", background: "linear-gradient(90deg, " + T.green + ", #34D399)", borderRadius: 3, transition: "width .6s ease" }} />
+              </div>
+              {packInfo && <span style={{ fontSize: 10, color: T.g[400], marginTop: 2, display: "block" }}>from {packInfo}</span>}
             </div>
-            <div style={{ height: 5, background: T.g[100], borderRadius: 3, overflow: "hidden" }}>
-              <div style={{ height: "100%", width: Math.min(100, (p.protein_g / data.protein_target) * 100) + "%", background: "linear-gradient(90deg, " + T.green + ", #34D399)", borderRadius: 3, transition: "width .6s ease" }} />
-            </div>
-            <span style={{ fontSize: 10, color: T.g[400], marginTop: 2, display: "block" }}>from {p.pack_info}</span>
-          </div>
-        ))}
+          );
+        })}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0 0", borderTop: "1px solid " + T.g[100], marginTop: 4 }}>
           <span style={{ fontSize: 13, fontWeight: 800, color: T.dark }}>Total</span>
-          <span style={{ fontSize: 16, fontWeight: 800, color: T.green, fontFamily: mono }}>{total.toFixed(1)}g / {data.protein_target}g</span>
+          <span style={{ fontSize: 16, fontWeight: 800, color: T.green, fontFamily: mono }}>{total.toFixed(1)}g / {proteinTarget}g</span>
         </div>
       </div>
 
       {/* Utilization Picker */}
-      {(data.utilization_options || []).length > 0 && (
+      {utilizationOptions.length > 0 && (
         <div style={{ padding: 14, background: T.white, borderRadius: 16, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 10 }}>
           <p style={{ fontSize: 13, fontWeight: 800, color: T.dark, marginBottom: 4 }}>Pack utilization</p>
           <p style={{ fontSize: 11, color: T.g[400], marginBottom: 12 }}>What to do with leftover portions?</p>
-          {data.utilization_options.map((item, idx) => (
-            <div key={idx} style={{ marginBottom: idx < data.utilization_options.length - 1 ? 16 : 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: T.dark }}>{item.product_name}</span>
-                <span style={{ fontSize: 10, fontWeight: 600, color: T.amber, background: T.amberLt, padding: "2px 6px", borderRadius: 99 }}>{item.remaining}</span>
+          {utilizationOptions.map((item, idx) => {
+            const itemProductName = item.product_name || item.name || "Product";
+            const itemRemaining = item.remaining || item.leftover || "";
+            const itemOptions = item.options || [];
+            
+            return (
+              <div key={idx} style={{ marginBottom: idx < utilizationOptions.length - 1 ? 16 : 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: T.dark }}>{itemProductName}</span>
+                  <span style={{ fontSize: 10, fontWeight: 600, color: T.amber, background: T.amberLt, padding: "2px 6px", borderRadius: 99 }}>{itemRemaining}</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  {itemOptions.map((opt, i) => {
+                    const optValue = typeof opt === 'string' ? opt : (opt.value || opt.label);
+                    const optLabel = typeof opt === 'string' ? opt : (opt.label || opt.value);
+                    const isActive = utilization[itemProductName] === optValue;
+                    return (
+                      <button key={i} onClick={() => !locked && setUtilization(p => ({ ...p, [itemProductName]: optValue }))} disabled={locked} style={{
+                        display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10,
+                        border: "2px solid " + (isActive ? T.brand : T.g[200]), background: isActive ? T.brandLt : T.white,
+                        cursor: locked ? "not-allowed" : "pointer", textAlign: "left", opacity: locked ? 0.7 : 1,
+                      }}>
+                        <div style={{ width: 18, height: 18, borderRadius: "50%", border: "2px solid " + (isActive ? T.brand : T.g[300]), display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          {isActive && <div style={{ width: 10, height: 10, borderRadius: "50%", background: T.brand }} />}
+                        </div>
+                        <span style={{ fontSize: 12, fontWeight: isActive ? 600 : 500, color: isActive ? T.brand : T.g[600] }}>{optLabel}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                {(item.options || []).map((opt, i) => {
-                  const isActive = utilization[item.product_name] === opt.value;
-                  return (
-                    <button key={i} onClick={() => setUtilization(p => ({ ...p, [item.product_name]: opt.value }))} style={{
-                      display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10,
-                      border: "2px solid " + (isActive ? T.brand : T.g[200]), background: isActive ? T.brandLt : T.white,
-                      cursor: "pointer", textAlign: "left",
-                    }}>
-                      <div style={{ width: 18, height: 18, borderRadius: "50%", border: "2px solid " + (isActive ? T.brand : T.g[300]), display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        {isActive && <div style={{ width: 10, height: 10, borderRadius: "50%", background: T.brand }} />}
-                      </div>
-                      <span style={{ fontSize: 12, fontWeight: isActive ? 600 : 500, color: isActive ? T.brand : T.g[600] }}>{opt.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
       <Btn onClick={handleConfirm} full disabled={locked} loading={locked} style={{ marginTop: 16 }}>
-        {locked ? "Locking..." : `Lock ${data.meal_label} ✓`}
+        {locked ? "Locking..." : `Lock ${mealLabel} ✓`}
       </Btn>
     </div>
   );
