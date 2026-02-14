@@ -537,7 +537,16 @@ const CutChips = ({ data, onSelect }) => {
 
 const ProductCardGrid = ({ data, onSelect }) => {
   const [selected, setSelected] = useState([]);
+  const [submitted, setSubmitted] = useState(false);
   const mealTarget = data.protein_target || 50;
+  
+  // Group products by category
+  const productsByCategory = (data.products || []).reduce((acc, p) => {
+    const cat = p.category || 'other';
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(p);
+    return acc;
+  }, {});
   
   // Calculate rough protein estimate
   const totalSelectedProtein = selected.reduce((sum, productName) => {
@@ -554,9 +563,94 @@ const ProductCardGrid = ({ data, onSelect }) => {
   const allSources = [...new Set((data.products || []).map(p => p.category))];
   const sourcesWithoutSelection = allSources.filter(s => !selectedSources.includes(s));
   
+  // Handle product selection with SWAP logic (max 1 per category)
+  const handleProductSelect = (product) => {
+    if (submitted) return;
+    const productName = product.product_name;
+    const category = product.category || 'other';
+    
+    setSelected(prev => {
+      const isSelected = prev.includes(productName);
+      if (isSelected) {
+        // Deselect
+        return prev.filter(n => n !== productName);
+      } else {
+        // SWAP: Remove any existing selection from same category, then add new
+        const filtered = prev.filter(n => {
+          const p = (data.products || []).find(prod => prod.product_name === n);
+          return p?.category !== category;
+        });
+        return [...filtered, productName];
+      }
+    });
+  };
+  
+  const handleSubmit = () => {
+    if (selected.length === 0 || submitted) return;
+    setSubmitted(true);
+    onSelect(selected.join(", "));
+  };
+  
+  // Render products grouped by category with "Pick 1" label
+  const renderCategoryGroup = (category, products) => {
+    const categoryIcons = { chicken: '🍗', eggs: '🥚', fish: '🐟', mutton: '🥩' };
+    const categoryLabels = { chicken: 'Chicken', eggs: 'Eggs', fish: 'Fish', mutton: 'Mutton' };
+    
+    return (
+      <div key={category} style={{ marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: T.dark }}>
+            {categoryIcons[category] || '🥩'} {categoryLabels[category] || category}
+          </span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: T.brand, background: T.brandLt, padding: "3px 8px", borderRadius: 99 }}>
+            Pick 1
+          </span>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          {products.map((p, i) => {
+            const isSelected = selected.includes(p.product_name);
+            const proteinDisplay = p.category === 'eggs'
+              ? '6.5g/egg'
+              : p.protein_per_100g 
+                ? `${p.protein_per_100g}g/100g` 
+                : '';
+            
+            return (
+              <button key={i} onClick={() => handleProductSelect(p)} disabled={submitted} style={{
+                padding: 8, borderRadius: 14, border: "2px solid " + (isSelected ? T.brand : T.g[200]),
+                background: isSelected ? T.brandLt : T.white, cursor: submitted ? "not-allowed" : "pointer", textAlign: "left",
+                boxShadow: isSelected ? "0 4px 12px " + T.brand + "15" : "0 1px 4px rgba(0,0,0,0.04)",
+                opacity: submitted ? 0.7 : 1,
+              }}>
+                <div style={{ width: "100%", aspectRatio: "1", borderRadius: 10, background: T.g[100], overflow: "hidden", marginBottom: 8, position: "relative" }}>
+                  {p.image_url ? <img src={p.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => e.target.style.display = "none"} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🥩</div>}
+                  {isSelected && (
+                    <div style={{ position: "absolute", top: 6, right: 6, width: 22, height: 22, borderRadius: "50%", background: T.brand, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ color: "#fff", fontSize: 12, fontWeight: 800 }}>✓</span>
+                    </div>
+                  )}
+                </div>
+                <p style={{ fontSize: 11, fontWeight: 700, color: T.dark, lineHeight: 1.3, marginBottom: 4, minHeight: 28 }}>{p.product_name}</p>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: T.brand, fontFamily: mono }}>₹{p.price}</span>
+                  {proteinDisplay && (
+                    <span style={{ fontSize: 9, fontWeight: 700, color: T.green, background: T.greenLt, padding: "2px 6px", borderRadius: 99 }}>
+                      {proteinDisplay}
+                    </span>
+                  )}
+                </div>
+                <p style={{ fontSize: 10, color: T.g[400], marginTop: 3 }}>{p.pack_size_label}</p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+  
   return (
     <div className="si" style={{ marginTop: 8 }}>
-      <p style={{ fontSize: 12, color: T.g[400], marginBottom: 10 }}>Tap to select products</p>
+      <p style={{ fontSize: 12, color: T.g[400], marginBottom: 10 }}>Tap to select products (max 1 per category)</p>
       
       {!canSelectMore && (
         <div style={{ padding: "10px 14px", background: T.amberLt, border: "1px solid " + T.amber, borderRadius: 12, marginBottom: 8, fontSize: 12, color: T.amber, fontWeight: 600 }}>
@@ -564,45 +658,7 @@ const ProductCardGrid = ({ data, onSelect }) => {
         </div>
       )}
       
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-        {(data.products || []).map((p, i) => {
-          const isSelected = selected.includes(p.product_name);
-          
-          // Determine protein display
-          const proteinDisplay = p.category === 'eggs'
-            ? '6.5g/egg'
-            : p.protein_per_100g 
-              ? `${p.protein_per_100g}g/100g` 
-              : '';
-          
-          return (
-            <button key={i} onClick={() => setSelected(prev => isSelected ? prev.filter(n => n !== p.product_name) : [...prev, p.product_name])} style={{
-              padding: 8, borderRadius: 14, border: "2px solid " + (isSelected ? T.brand : T.g[200]),
-              background: isSelected ? T.brandLt : T.white, cursor: "pointer", textAlign: "left",
-              boxShadow: isSelected ? "0 4px 12px " + T.brand + "15" : "0 1px 4px rgba(0,0,0,0.04)",
-            }}>
-              <div style={{ width: "100%", aspectRatio: "1", borderRadius: 10, background: T.g[100], overflow: "hidden", marginBottom: 8, position: "relative" }}>
-                {p.image_url ? <img src={p.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => e.target.style.display = "none"} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🥩</div>}
-                {isSelected && (
-                  <div style={{ position: "absolute", top: 6, right: 6, width: 22, height: 22, borderRadius: "50%", background: T.brand, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ color: "#fff", fontSize: 12, fontWeight: 800 }}>✓</span>
-                  </div>
-                )}
-              </div>
-              <p style={{ fontSize: 11, fontWeight: 700, color: T.dark, lineHeight: 1.3, marginBottom: 4, minHeight: 28 }}>{p.product_name}</p>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 14, fontWeight: 800, color: T.brand, fontFamily: mono }}>₹{p.price}</span>
-                {proteinDisplay && (
-                  <span style={{ fontSize: 9, fontWeight: 700, color: T.green, background: T.greenLt, padding: "2px 6px", borderRadius: 99 }}>
-                    {proteinDisplay}
-                  </span>
-                )}
-              </div>
-              <p style={{ fontSize: 10, color: T.g[400], marginTop: 3 }}>{p.pack_size_label}</p>
-            </button>
-          );
-        })}
-      </div>
+      {Object.entries(productsByCategory).map(([category, products]) => renderCategoryGroup(category, products))}
       
       {sourcesWithoutSelection.length > 0 && selected.length > 0 && (
         <div style={{ padding: "8px 12px", background: T.blueLt, borderRadius: 10, fontSize: 12, color: T.blue, marginTop: 8 }}>
@@ -610,8 +666,8 @@ const ProductCardGrid = ({ data, onSelect }) => {
         </div>
       )}
       
-      <Btn onClick={() => onSelect(selected.join(", "))} full disabled={selected.length === 0} style={{ marginTop: 16 }}>
-        Select These →
+      <Btn onClick={handleSubmit} full disabled={selected.length === 0 || submitted} loading={submitted} style={{ marginTop: 16 }}>
+        {submitted ? "Submitting..." : "Select These →"}
       </Btn>
     </div>
   );
@@ -619,9 +675,12 @@ const ProductCardGrid = ({ data, onSelect }) => {
 
 const PortionConfirmCard = ({ data, onConfirm }) => {
   const [utilization, setUtilization] = useState({});
-  const total = (data.portions || []).reduce((s, p) => s + p.protein_g, 0);
+  const [locked, setLocked] = useState(false);
+  const total = Math.round((data.portions || []).reduce((s, p) => s + p.protein_g, 0) * 10) / 10;
   
   const handleConfirm = () => {
+    if (locked) return;
+    setLocked(true);
     // Convert utilization object to message string
     const utilizationMsg = Object.entries(utilization).map(([product, choice]) => `${product}: ${choice}`).join(", ");
     const msg = `Lock ${data.meal_label}, utilization: ${utilizationMsg}`;
@@ -635,14 +694,14 @@ const PortionConfirmCard = ({ data, onConfirm }) => {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
           <p style={{ fontSize: 13, fontWeight: 800, color: T.dark }}>{data.meal_label} portions</p>
           <span style={{ fontSize: 11, fontWeight: 700, color: total >= data.protein_target ? T.green : T.amber, background: total >= data.protein_target ? T.greenLt : T.amberLt, padding: "3px 8px", borderRadius: 99 }}>
-            {total >= data.protein_target ? "✓ Target met" : total + "/" + data.protein_target + "g"}
+            {total >= data.protein_target ? "✓ Target met" : (Math.round(total * 10) / 10) + "/" + data.protein_target + "g"}
           </span>
         </div>
         {(data.portions || []).map((p, i) => (
           <div key={i} style={{ marginBottom: 10 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
               <span style={{ fontSize: 12, fontWeight: 600, color: T.dark }}>{p.product_name} ({p.quantity})</span>
-              <span style={{ fontSize: 13, fontWeight: 800, color: T.green, fontFamily: mono }}>{p.protein_g}g</span>
+              <span style={{ fontSize: 13, fontWeight: 800, color: T.green, fontFamily: mono }}>{(Math.round(p.protein_g * 10) / 10)}g</span>
             </div>
             <div style={{ height: 5, background: T.g[100], borderRadius: 3, overflow: "hidden" }}>
               <div style={{ height: "100%", width: Math.min(100, (p.protein_g / data.protein_target) * 100) + "%", background: "linear-gradient(90deg, " + T.green + ", #34D399)", borderRadius: 3, transition: "width .6s ease" }} />
@@ -689,8 +748,8 @@ const PortionConfirmCard = ({ data, onConfirm }) => {
         </div>
       )}
 
-      <Btn onClick={handleConfirm} full style={{ marginTop: 16 }}>
-        Lock {data.meal_label} ✓
+      <Btn onClick={handleConfirm} full disabled={locked} loading={locked} style={{ marginTop: 16 }}>
+        {locked ? "Locking..." : `Lock ${data.meal_label} ✓`}
       </Btn>
     </div>
   );
@@ -786,7 +845,7 @@ const MealPlanningWizard = ({ sessionId, onComplete, onRestart }) => {
             
             // Show collapsed badge for old bot messages with ui_type
             if (!isLatestBot && m.data?.ui_type) {
-              return <CollapsedBadge key={i} type={m.data.ui_type} data={m.data.ui_data || {}} />;
+              return <CollapsedBadge key={i} type={m.data.ui_type} data={m.data.ui_data || {}} fullData={m.data || {}} />;
             }
             
             return (
