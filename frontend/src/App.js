@@ -544,7 +544,14 @@ const DistributionSetup = ({ data, onSelect }) => {
 
 const SourceChips = ({ data, onSelect }) => {
   const [selected, setSelected] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const maxSources = 3;
+  
+  const handleSubmit = () => {
+    if (selected.length === 0 || isSubmitting) return;
+    setIsSubmitting(true);
+    onSelect(selected.join(" and "));
+  };
   
   return (
     <div className="si" style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
@@ -559,23 +566,24 @@ const SourceChips = ({ data, onSelect }) => {
             <button 
               key={s.name} 
               onClick={() => {
+                if (isSubmitting) return;
                 if (isSelected) {
                   setSelected(prev => prev.filter(n => n !== s.name));
                 } else if (canSelect) {
                   setSelected(prev => [...prev, s.name]);
                 }
               }}
-              disabled={!canSelect && !isSelected}
+              disabled={(!canSelect && !isSelected) || isSubmitting}
               style={{ 
                 display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: T.r.full, 
                 border: "2px solid " + (isSelected ? T.brand : T.g[200]), 
                 background: isSelected ? T.brandLt : T.white, 
                 color: isSelected ? T.brand : T.g[700], 
                 fontSize: 14, fontWeight: isSelected ? 700 : 500, 
-                cursor: canSelect ? "pointer" : "not-allowed", 
+                cursor: (canSelect && !isSubmitting) ? "pointer" : "not-allowed", 
                 transition: "all .2s", 
                 whiteSpace: "nowrap",
-                opacity: (!canSelect && !isSelected) ? 0.4 : 1
+                opacity: ((!canSelect && !isSelected) || isSubmitting) ? 0.5 : 1
               }}
             >
               {s.icon && <span style={{ fontSize: 18 }}>{s.icon}</span>}
@@ -585,8 +593,8 @@ const SourceChips = ({ data, onSelect }) => {
           );
         })}
       </div>
-      <Btn onClick={() => onSelect(selected.join(" and "))} full disabled={selected.length === 0} style={{ marginTop: 16 }}>
-        Continue →
+      <Btn onClick={handleSubmit} full disabled={selected.length === 0 || isSubmitting} loading={isSubmitting} style={{ marginTop: 16 }}>
+        {isSubmitting ? "Submitting..." : "Continue →"}
       </Btn>
     </div>
   );
