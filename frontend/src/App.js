@@ -1211,16 +1211,22 @@ const WeeklyOrderWizard = ({ sessionId, onComplete, onRestart }) => {
     }
   }, []);
 
-  const send = async (message) => {
-    const msgText = typeof message === 'string' ? message : (typeof message === 'object' ? JSON.stringify(message) : String(message));
-    if (!msgText.trim()) return;
+  // FIX 6: Safe send function that handles ALL input types
+  const send = async (input) => {
+    let text = '';
+    if (typeof input === 'string') text = input;
+    else if (typeof input === 'object' && input !== null) text = JSON.stringify(input);
+    else text = String(input || '');
     
-    setLastMessage(msgText.trim());
+    text = text.trim();
+    if (!text) return;
+    
+    setLastMessage(text);
     setError(null);
-    setMsgs(p => [...p, { role: "user", text: msgText.trim() }]);
+    setMsgs(p => [...p, { role: "user", text }]);
     setLoading(true);
     try {
-      const res = await fetch(ENDPOINTS.weeklyCart, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sessionId, message: msgText.trim() }) });
+      const res = await fetch(ENDPOINTS.weeklyCart, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sessionId, message: text }) });
       const raw = await res.text();
       
       if (!raw || raw.trim() === '') {
@@ -1255,16 +1261,35 @@ const WeeklyOrderWizard = ({ sessionId, onComplete, onRestart }) => {
     }
   };
 
-  const renderUI = (msg) => {
-    const { ui_type, ui_data } = msg.data || {};
-    if (!ui_type || !ui_data) return null;
+  // FIX 1: Known ui_types for Agent 3
+  const knownUiTypes = ['delivery_select', 'weekly_plan', 'cart_display'];
 
-    switch (ui_type) {
-      case 'delivery_select': return <DeliverySelect data={ui_data} onSelect={send} />;
-      case 'weekly_plan': return <WeeklyPlanReview data={ui_data} onConfirm={send} />;
-      case 'cart_display': return <CartPreview data={ui_data} onConfirm={send} />;
-      default: return null;
+  const renderUI = (msg, isLatest) => {
+    const uiType = msg.data?.ui_type;
+    const uiData = msg.data?.ui_data;
+    
+    // If we have a recognized ui_type with data, render the visual component
+    if (uiType && uiData && knownUiTypes.includes(uiType)) {
+      switch (uiType) {
+        case 'delivery_select': return <DeliverySelect data={uiData} onSelect={send} />;
+        case 'weekly_plan': return <WeeklyPlanReview data={uiData} onConfirm={send} />;
+        case 'cart_display': return <CartPreview data={uiData} onConfirm={send} />;
+        default: return null;
+      }
     }
+    
+    // FIX 1: FALLBACK - Show text + input for ANY unrecognized response
+    if (isLatest) {
+      const text = msg.data?.message || msg.text || '';
+      return (
+        <div style={{ padding: "14px 16px", background: T.white, border: "1px solid " + T.g[100], borderRadius: 14, boxShadow: T.sh.s }}>
+          <FormattedText text={text} />
+          <ChatInput onSend={send} disabled={loading} />
+        </div>
+      );
+    }
+    
+    return null;
   };
 
   return (
@@ -1279,16 +1304,20 @@ const WeeklyOrderWizard = ({ sessionId, onComplete, onRestart }) => {
         {msgs.map((m, i) => {
           if (m.role === "bot") {
             const isLatestBot = i === msgs.length - 1 || (i === msgs.length - 2 && loading);
-            const ui = isLatestBot ? renderUI(m) : null;
             
+            // Show collapsed badge for old bot messages with ui_type
             if (!isLatestBot && m.data?.ui_type) {
-              return <div key={i} style={{ padding: "8px 12px", background: T.g[50], borderRadius: 10, fontSize: 12, color: T.g[600], fontWeight: 600, marginBottom: 8 }}>✓ {m.data.ui_type === 'delivery_select' ? 'Delivery confirmed' : 'Step completed'}</div>;
+              return <div key={i} style={{ padding: "8px 12px", background: T.g[50], borderRadius: 10, fontSize: 12, color: T.g[600], fontWeight: 600, marginBottom: 8 }}>✓ {m.data.ui_type === 'delivery_select' ? 'Delivery confirmed' : m.data.ui_type === 'weekly_plan' ? 'Plan reviewed' : 'Step completed'}</div>;
             }
+            
+            const ui = renderUI(m, isLatestBot);
             
             return (
               <div key={i} style={{ marginBottom: 12 }}>
-                <p style={{ fontSize: 12, color: T.g[400], marginBottom: 6, lineHeight: 1.4 }}>{m.text}</p>
-                {ui || <div style={{ padding: "10px 14px", background: T.white, border: "1px solid " + T.g[100], borderRadius: 14, fontSize: 13, lineHeight: 1.6, color: T.g[700], boxShadow: T.sh.s }}>{m.text}</div>}
+                {isLatestBot && m.text && !m.data?.ui_type && (
+                  <p style={{ fontSize: 12, color: T.g[400], marginBottom: 6, lineHeight: 1.4 }}>{m.text}</p>
+                )}
+                {ui}
               </div>
             );
           }
