@@ -251,18 +251,25 @@ const CalculatorDisclaimer = ({ onStart, onRestart }) => {
 const Onboarding = ({ sessionId, onComplete, onRestart }) => {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
   const [form, setForm] = useState({ name: "", age: "", gender: "", height: "", weight: "", targetWeight: "", timeline: 12, activity: "", preferences: [], meals: 3 });
   const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
   const sendMsg = async (msg) => {
     setLoading(true);
+    setError(false);
     try {
       const res = await fetch(ENDPOINTS.onboarding, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sessionId, message: msg }) });
       const text = await res.text();
+      if (!text || text.trim() === '') throw new Error('Empty response');
       let data; try { data = JSON.parse(text); } catch { data = { message: text }; }
       if (data.stage_complete) { setTimeout(() => onComplete(data.data_collected || data), 600); }
       return data;
-    } catch (err) { console.error(err); } finally { setLoading(false); }
+    } catch (err) { 
+      console.error(err); 
+      setError(true);
+      return null;
+    } finally { setLoading(false); }
   };
 
   const formSteps = [
@@ -299,7 +306,11 @@ const Onboarding = ({ sessionId, onComplete, onRestart }) => {
   ];
 
   const cur = formSteps[step];
-  const handleNext = async () => { if (!cur.ok) return; await cur.go(); if (step < formSteps.length - 1) setStep(s => s + 1); };
+  const handleNext = async () => { 
+    if (!cur.ok) return; 
+    const result = await cur.go(); 
+    if (result && step < formSteps.length - 1) setStep(s => s + 1); 
+  };
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: T.white }}>
@@ -314,9 +325,15 @@ const Onboarding = ({ sessionId, onComplete, onRestart }) => {
         <h2 style={{ fontSize: 22, fontWeight: 800, color: T.dark, marginBottom: 6, letterSpacing: "-0.02em" }}>{cur.title}</h2>
         <p style={{ fontSize: 13, color: T.g[500], marginBottom: 24, lineHeight: 1.5 }}>{cur.sub}</p>
         {cur.ui}
+        {error && (
+          <div style={{ marginTop: 16, padding: "12px 16px", background: T.brandLt, borderRadius: T.r.m, border: "1px solid " + T.brand + "30", display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 18 }}>⚠️</span>
+            <span style={{ fontSize: 13, color: T.brand, fontWeight: 600 }}>Something went wrong. Tap Continue to retry.</span>
+          </div>
+        )}
       </div>
       <div style={{ padding: "16px 24px 32px" }}>
-        <Btn onClick={handleNext} full disabled={!cur.ok} loading={loading}>Continue{step < formSteps.length - 1 && <span> →</span>}</Btn>
+        <Btn onClick={handleNext} full disabled={!cur.ok} loading={loading}>{error ? "Tap to retry ↻" : "Continue"}{!error && step < formSteps.length - 1 && <span> →</span>}</Btn>
       </div>
     </div>
   );
