@@ -357,17 +357,67 @@ const Results = ({ data, onContinue }) => {
 
 // VISUAL MEAL PLANNING COMPONENTS (backend-driven)
 
+// Collapsed Badge for previous responses
+const CollapsedBadge = ({ type, data }) => {
+  let text = "";
+  switch (type) {
+    case 'budget_setup':
+      const dist = (data.distributions || []).find(d => d.label);
+      text = dist ? `✓ ${dist.label} — ${dist.breakfast}g / ${dist.lunch}g / ${dist.dinner}g` : "✓ Distribution set";
+      break;
+    case 'source_select':
+      text = "✓ Sources selected";
+      break;
+    case 'cut_select':
+      text = "✓ Cut type selected";
+      break;
+    case 'product_select':
+      text = `✓ ${(data.products || []).length} product options shown`;
+      break;
+    case 'portion_confirm':
+      text = `✓ ${data.meal_label} portions confirmed`;
+      break;
+    case 'meal_confirmed':
+      text = `✓ ${data.meal_label} locked — ${data.total_protein}g protein`;
+      break;
+    default:
+      text = "✓ Step completed";
+  }
+  
+  return (
+    <div style={{ padding: "8px 12px", background: T.g[50], borderRadius: 10, fontSize: 12, color: T.g[600], fontWeight: 600, marginBottom: 8 }}>
+      {text}
+    </div>
+  );
+};
+
 const DistributionSetup = ({ data, onSelect }) => {
   const [sel, setSel] = useState(null);
   const [supplement, setSupplement] = useState(false);
+  const [supplementGrams, setSupplementGrams] = useState("");
   
   return (
     <div className="si" style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
       <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Do you take protein supplements?</p>
-      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: supplement ? 12 : 20 }}>
         <button onClick={() => setSupplement(false)} style={{ flex: 1, padding: "11px 14px", borderRadius: 12, border: "2px solid " + (!supplement ? T.brand : T.g[200]), background: !supplement ? T.brandLt : T.white, color: !supplement ? T.brand : T.g[600], fontSize: 13, fontWeight: !supplement ? 700 : 500, cursor: "pointer" }}>No supplements</button>
         <button onClick={() => setSupplement(true)} style={{ flex: 1, padding: "11px 14px", borderRadius: 12, border: "2px solid " + (supplement ? T.brand : T.g[200]), background: supplement ? T.brandLt : T.white, color: supplement ? T.brand : T.g[600], fontSize: 13, fontWeight: supplement ? 700 : 500, cursor: "pointer" }}>Yes, I take</button>
       </div>
+      
+      {supplement && (
+        <div className="si" style={{ marginBottom: 20 }}>
+          <label style={{ fontSize: 12, fontWeight: 600, color: T.g[600], marginBottom: 6, display: "block" }}>
+            How many grams per day?
+          </label>
+          <input 
+            type="number" 
+            placeholder="e.g. 30" 
+            value={supplementGrams} 
+            onChange={e => setSupplementGrams(e.target.value)}
+            style={{ width: "100%", padding: "12px 14px", border: "2px solid " + T.g[200], borderRadius: 14, fontSize: 16, fontWeight: 600, background: T.white, color: T.dark }}
+          />
+        </div>
+      )}
       
       <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>How to split your {data.protein_target}g protein?</p>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
