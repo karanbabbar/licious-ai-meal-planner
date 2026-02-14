@@ -628,6 +628,10 @@ const CutChips = ({ data, onSelect }) => {
   const [selected, setSelected] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // Defensive: handle alternate field names from backend
+  const category = data.category || data.source || data.protein_source || "Protein";
+  const cuts = data.cuts || data.cut_options || data.options || [];
+  
   const handleSelect = (cut) => {
     if (isSubmitting) return;
     setSelected(cut);
@@ -637,14 +641,15 @@ const CutChips = ({ data, onSelect }) => {
   
   return (
     <div className="si" style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
-      <p style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 12 }}>{data.category} cut preference</p>
+      <p style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 12 }}>{category} cut preference</p>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-        {(data.cuts || []).map(cut => {
-          const isSelected = selected === cut;
+        {cuts.map(cut => {
+          const cutName = typeof cut === 'string' ? cut : cut.name || cut.label;
+          const isSelected = selected === cutName;
           return (
             <button 
-              key={cut} 
-              onClick={() => handleSelect(cut)}
+              key={cutName} 
+              onClick={() => handleSelect(cutName)}
               disabled={isSubmitting}
               style={{ 
                 display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: T.r.full, 
@@ -658,7 +663,7 @@ const CutChips = ({ data, onSelect }) => {
                 opacity: isSubmitting && !isSelected ? 0.5 : 1
               }}
             >
-              {cut}
+              {cutName}
               {isSelected && (isSubmitting ? <div style={{ width: 14, height: 14, border: "2px solid " + T.brand + "40", borderTopColor: T.brand, borderRadius: "50%", animation: "spin .6s linear infinite" }} /> : "  ✓")}
             </button>
           );
