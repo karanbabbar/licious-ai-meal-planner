@@ -1025,6 +1025,216 @@ const MealPlanningWizard = ({ sessionId, onComplete, onRestart }) => {
   );
 };
 
+// WEEKLY ORDER WIZARD (Agent 3)
+const WeeklyOrderWizard = ({ sessionId, onComplete, onRestart }) => {
+  const [msgs, setMsgs] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState(null);
+  const [lastMessage, setLastMessage] = useState(null);
+  const hasSent = useRef(false);
+
+  useEffect(() => {
+    if (!hasSent.current) {
+      hasSent.current = true;
+      send("Build my weekly order");
+    }
+  }, []);
+
+  const send = async (message) => {
+    const msgText = typeof message === 'string' ? message : (typeof message === 'object' ? JSON.stringify(message) : String(message));
+    if (!msgText.trim()) return;
+    
+    setLastMessage(msgText.trim());
+    setError(null);
+    setMsgs(p => [...p, { role: "user", text: msgText.trim() }]);
+    setLoading(true);
+    try {
+      const res = await fetch(ENDPOINTS.weeklyCart, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sessionId, message: msgText.trim() }) });
+      const raw = await res.text();
+      
+      if (!raw || raw.trim() === '') {
+        throw new Error('Empty response from server');
+      }
+      
+      let data;
+      try {
+        const cleaned = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        data = JSON.parse(cleaned);
+      } catch {
+        data = { message: raw };
+      }
+      setMsgs(p => [...p, { role: "bot", text: data.message || raw, data }]);
+      if (data.stage_complete) {
+        setDone(true);
+        setTimeout(() => onComplete(data), 1500);
+      }
+    } catch (err) {
+      console.error('API Error:', err);
+      setError(true);
+      setMsgs(p => p.slice(0, -1));
+    }
+    setLoading(false);
+  };
+  
+  const handleRetry = () => {
+    if (lastMessage) {
+      send(lastMessage);
+    } else {
+      send("Build my weekly order");
+    }
+  };
+
+  const renderUI = (msg) => {
+    const { ui_type, ui_data } = msg.data || {};
+    if (!ui_type || !ui_data) return null;
+
+    switch (ui_type) {
+      case 'delivery_select': return <DeliverySelect data={ui_data} onSelect={send} />;
+      case 'weekly_plan': return <WeeklyPlanReview data={ui_data} onConfirm={send} />;
+      case 'cart_display': return <CartPreview data={ui_data} onConfirm={send} />;
+      default: return null;
+    }
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: T.bg }}>
+      <div style={{ padding: "10px 20px", background: T.white, borderBottom: "1px solid " + T.g[100], display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ width: 32, height: 32, borderRadius: T.r.m, background: "linear-gradient(135deg, " + T.amber + ", #FBBF24)", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 14 }}>🛒</span></div>
+        <div style={{ flex: 1 }}><div style={{ fontSize: 13, fontWeight: 700, color: T.dark }}>Weekly Order</div></div>
+        <button onClick={onRestart} style={{ width: 30, height: 30, borderRadius: T.r.m, border: "1px solid " + T.g[200], background: T.white, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: T.g[400] }} title="Start over">✕</button>
+      </div>
+      <JourneyTracker steps={STEPS} current={4} />
+      <div className="no-sb" style={{ flex: 1, overflow: "auto", padding: "12px 14px" }}>
+        {msgs.map((m, i) => {
+          if (m.role === "bot") {
+            const isLatestBot = i === msgs.length - 1 || (i === msgs.length - 2 && loading);
+            const ui = isLatestBot ? renderUI(m) : null;
+            
+            if (!isLatestBot && m.data?.ui_type) {
+              return <div key={i} style={{ padding: "8px 12px", background: T.g[50], borderRadius: 10, fontSize: 12, color: T.g[600], fontWeight: 600, marginBottom: 8 }}>✓ {m.data.ui_type === 'delivery_select' ? 'Delivery confirmed' : 'Step completed'}</div>;
+            }
+            
+            return (
+              <div key={i} style={{ marginBottom: 12 }}>
+                <p style={{ fontSize: 12, color: T.g[400], marginBottom: 6, lineHeight: 1.4 }}>{m.text}</p>
+                {ui || <div style={{ padding: "10px 14px", background: T.white, border: "1px solid " + T.g[100], borderRadius: 14, fontSize: 13, lineHeight: 1.6, color: T.g[700], boxShadow: T.sh.s }}>{m.text}</div>}
+              </div>
+            );
+          }
+          return null;
+        })}
+        {loading && <div style={{ display: "flex", gap: 5, padding: "10px 14px", background: T.white, borderRadius: 14, border: "1px solid " + T.g[100], maxWidth: 70, boxShadow: T.sh.s }}>{[0,1,2].map(i => <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: T.g[300], animation: "pulse 1.2s " + (i*.2) + "s ease-in-out infinite" }} />)}</div>}
+        {error && !loading && <ErrorRetry onRetry={handleRetry} />}
+        {done && <div className="si" style={{ textAlign: "center", padding: 16 }}><div style={{ width: 48, height: 48, borderRadius: "50%", background: T.greenLt, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 8px", fontSize: 22 }}>🛒</div><p style={{ fontSize: 13, fontWeight: 700, color: T.green }}>Weekly order ready!</p></div>}
+      </div>
+    </div>
+  );
+};
+
+// Agent 3 UI Components
+const DeliverySelect = ({ data, onSelect }) => {
+  const [selected, setSelected] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const handleSelect = (option) => {
+    if (isSubmitting) return;
+    setSelected(option);
+    setIsSubmitting(true);
+    onSelect(option);
+  };
+  
+  return (
+    <div className="si" style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
+      <p style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 12 }}>Delivery preference</p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {(data.options || ['Single delivery', 'Multiple deliveries']).map(opt => {
+          const isSelected = selected === opt;
+          return (
+            <button key={opt} onClick={() => handleSelect(opt)} disabled={isSubmitting} style={{
+              display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 14,
+              border: "2px solid " + (isSelected ? T.brand : T.g[200]), background: isSelected ? T.brandLt : T.white,
+              cursor: isSubmitting ? "not-allowed" : "pointer", textAlign: "left",
+              opacity: isSubmitting && !isSelected ? 0.5 : 1,
+            }}>
+              <span style={{ fontSize: 20 }}>{opt.includes('Single') ? '📦' : '📦📦'}</span>
+              <span style={{ flex: 1, fontSize: 14, fontWeight: isSelected ? 700 : 500, color: isSelected ? T.brand : T.dark }}>{opt}</span>
+              {isSelected && <div style={{ width: 20, height: 20, borderRadius: "50%", background: T.brand, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {isSubmitting ? <div style={{ width: 12, height: 12, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin .6s linear infinite" }} /> : <span style={{ color: "#fff", fontSize: 11 }}>✓</span>}
+              </div>}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const WeeklyPlanReview = ({ data, onConfirm }) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const handleConfirm = () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    onConfirm("Confirm weekly plan");
+  };
+  
+  return (
+    <div className="si" style={{ marginTop: 8 }}>
+      <div style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m }}>
+        <p style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 12 }}>Your Weekly Plan</p>
+        {(data.days || data.meals || []).map((day, i) => (
+          <div key={i} style={{ padding: "10px 0", borderBottom: i < (data.days || data.meals || []).length - 1 ? "1px solid " + T.g[100] : "none" }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: T.dark, marginBottom: 4 }}>{day.day || day.meal_label || `Day ${i + 1}`}</p>
+            <p style={{ fontSize: 11, color: T.g[500] }}>{day.products?.join(', ') || day.summary || 'Protein portions planned'}</p>
+          </div>
+        ))}
+      </div>
+      <Btn onClick={handleConfirm} full disabled={isSubmitting} loading={isSubmitting} style={{ marginTop: 16 }}>
+        {isSubmitting ? "Confirming..." : "Confirm Plan →"}
+      </Btn>
+    </div>
+  );
+};
+
+const CartPreview = ({ data, onConfirm }) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const cart = data.cart || data.items || [];
+  const total = data.total_cart_price || data.total || 0;
+  
+  const handleConfirm = () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    onConfirm("Finalize cart");
+  };
+  
+  return (
+    <div className="si" style={{ marginTop: 8 }}>
+      <div style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <p style={{ fontSize: 13, fontWeight: 700, color: T.dark }}>Cart Preview</p>
+          <span style={{ fontSize: 16, fontWeight: 800, color: T.brand, fontFamily: mono }}>₹{total.toLocaleString()}</span>
+        </div>
+        {cart.map((item, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: i < cart.length - 1 ? "1px solid " + T.g[100] : "none" }}>
+            <div style={{ width: 40, height: 40, borderRadius: 8, background: T.g[100], overflow: "hidden", flexShrink: 0 }}>
+              {item.image_url ? <img src={item.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🥩</div>}
+            </div>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 12, fontWeight: 600, color: T.dark }}>{item.product_name}</p>
+              <p style={{ fontSize: 10, color: T.g[500] }}>{item.pack_size_label} x {item.packs_needed || 1}</p>
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 700, color: T.brand, fontFamily: mono }}>₹{item.total_price || item.price}</span>
+          </div>
+        ))}
+      </div>
+      <Btn onClick={handleConfirm} full disabled={isSubmitting} loading={isSubmitting} style={{ marginTop: 16 }}>
+        {isSubmitting ? "Finalizing..." : "Finalize Order →"}
+      </Btn>
+    </div>
+  );
+};
+
 const FinalCart = ({ data }) => {
   const cart = data?.cart || [];
   const total = data?.total_cart_price || 0;
