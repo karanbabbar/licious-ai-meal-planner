@@ -529,20 +529,31 @@ const DistributionSetup = ({ data, onSelect }) => {
   const [supplementGrams, setSupplementGrams] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Convert distributions from object to array if needed
-  let distributions = data.distributions || [];
-  if (!Array.isArray(distributions)) {
+  // DEFENSIVE: Convert distributions from object to array if needed, handle all edge cases
+  let rawDistributions = data?.distributions || [];
+  let distributions = [];
+  
+  if (Array.isArray(rawDistributions)) {
+    distributions = rawDistributions;
+  } else if (typeof rawDistributions === 'object' && rawDistributions !== null) {
     const iconMap = { equal: "⚖️", heavy_breakfast: "🌅", heavy_lunch: "☀️", heavy_dinner: "🌙", custom: "🎯" };
     const labelMap = { equal: "Equal", heavy_breakfast: "Heavy Breakfast", heavy_lunch: "Heavy Lunch", heavy_dinner: "Heavy Dinner", custom: "Custom" };
-    distributions = Object.entries(distributions).map(([key, values]) => ({
+    distributions = Object.entries(rawDistributions).map(([key, values]) => ({
       label: labelMap[key] || key,
       icon: iconMap[key] || "⚖️",
       breakfast: values?.breakfast || values?.[0] || 0,
       lunch: values?.lunch || values?.[1] || 0,
       dinner: values?.dinner || values?.[2] || 0,
-      ...values
+      ...(typeof values === 'object' ? values : {})
     }));
   }
+  
+  // Ensure distributions is an array after all transformations
+  if (!Array.isArray(distributions)) {
+    distributions = [];
+  }
+  
+  const proteinTarget = data?.protein_target || 150;
   
   // Use fallback calculation if API returns 0 values
   const getDistributionValues = (d) => {
