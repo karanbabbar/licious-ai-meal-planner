@@ -601,14 +601,45 @@ const SourceChips = ({ data, onSelect }) => {
 };
 
 const CutChips = ({ data, onSelect }) => {
+  const [selected, setSelected] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const handleSelect = (cut) => {
+    if (isSubmitting) return;
+    setSelected(cut);
+    setIsSubmitting(true);
+    onSelect(cut);
+  };
+  
   return (
     <div className="si" style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
       <p style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 12 }}>{data.category} cut preference</p>
-      <PillSelect 
-        options={(data.cuts || []).map(c => ({ label: c, value: c }))}
-        value={null}
-        onChange={onSelect}
-      />
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        {(data.cuts || []).map(cut => {
+          const isSelected = selected === cut;
+          return (
+            <button 
+              key={cut} 
+              onClick={() => handleSelect(cut)}
+              disabled={isSubmitting}
+              style={{ 
+                display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: T.r.full, 
+                border: "2px solid " + (isSelected ? T.brand : T.g[200]), 
+                background: isSelected ? T.brandLt : T.white, 
+                color: isSelected ? T.brand : T.g[700], 
+                fontSize: 14, fontWeight: isSelected ? 700 : 500, 
+                cursor: isSubmitting ? "not-allowed" : "pointer", 
+                transition: "all .2s", 
+                whiteSpace: "nowrap",
+                opacity: isSubmitting && !isSelected ? 0.5 : 1
+              }}
+            >
+              {cut}
+              {isSelected && (isSubmitting ? <div style={{ width: 14, height: 14, border: "2px solid " + T.brand + "40", borderTopColor: T.brand, borderRadius: "50%", animation: "spin .6s linear infinite" }} /> : "  ✓")}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 };
