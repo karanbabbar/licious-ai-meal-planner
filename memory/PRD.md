@@ -56,7 +56,33 @@ Build a React mobile-first web app called "Protein Planner v2" - a guided wizard
 - Final cart summary screen
 - Journey tracker (progress indicator)
 
-### Bug Fixes Applied (Dec 2025) ✅
+### Bug Fixes - Comprehensive Defensive Programming Audit (Dec 2025) ✅
+**P0 CRITICAL - All `.map()` crashes fixed with Array.isArray() guards:**
+1. **PillSelect** (Line 51) - Guard on options.map()
+2. **DistributionSetup** (Lines 536-554, 594) - rawDistributions normalization + distributions.map() guard
+3. **SourceChips** (Lines 651-659, 662, 678) - rawSources normalization + sources.map() guard
+4. **CutChips** (Lines 727-738, 761) - rawCuts normalization + cuts.map() guard
+5. **ProductCardGrid** (Lines 799-807, 810-811, 880, 934, 938, 949) - rawProducts normalization + all .map() guards
+6. **PortionConfirmCard** (Lines 972-988, 990, 1011, 1037, 1041, 1044, 1047, 1053) - portions & utilizationOptions normalization + all .map() guards
+7. **MealPlanningWizard msgs** (Line 1240) - msgs.map() guard
+8. **WeeklyOrderWizard msgs** (Line 1377) - msgs.map() guard
+9. **DeliverySelect** (Lines 1419-1429, 1435) - options normalization + .map() guard
+10. **WeeklyPlanReview** (Lines 1463-1481) - days normalization + .map() guards
+11. **CartPreview** (Lines 1500-1524) - cart normalization + .map() guards
+12. **FinalCart** (Lines 1548-1566) - cart normalization + .map() guard
+
+**P1 - CTA Button Disable After Click:**
+- All submit buttons have isSubmitting/submitted state preventing double submissions
+- Loading spinners shown during API calls
+
+**P1 - Agent 2 → Agent 3 Transition:**
+- Code verified: When meal planning API returns stage_complete=true, goes to 'weekly' screen (WeeklyOrderWizard), NOT directly to 'cart'
+
+**P2 - Fallback Text Input:**
+- ChatInput component renders when ui_type is not recognized or missing
+- Allows users to always respond with text
+
+### Previous Bug Fixes Applied (Dec 2025) ✅
 1. **P0 - msg.trim error** - Type checking before trim() in send function
 2. **P1 - Budget badge undefined** - Added fullData prop to CollapsedBadge
 3. **P1 - Product selection** - SWAP logic (max 1 per category) + "Pick 1" labels
@@ -65,28 +91,12 @@ Build a React mobile-first web app called "Protein Planner v2" - a guided wizard
 6. **P2 - Lock Meal button** - Disabled after submission with loading state
 7. **Retry mechanism** - ErrorRetry component shows "Something went wrong. Tap to retry" on API failures
 
-### Bug Fixes - Round 3 (Dec 2025) ✅
-1. **CRITICAL - Agent 3 not triggered** - Created WeeklyOrderWizard component, flow now: meals → weekly → cart
-2. **Distribution badge 0g values** - Added calculateDistribution() fallback when API returns zeros
-3. **₹0 products selectable** - Filter out already-purchased products, show "Already in your order" section
-4. **CTAs not disabling** - Added isSubmitting state to: DistributionSetup, SourceChips, CutChips, DeliverySelect, WeeklyPlanReview, CartPreview
-5. **Distribution fallback calc** - Helper function calculates Equal/Heavy Breakfast/Lunch/Dinner splits locally
-
-### Bug Fixes - Complete Fix Round (Dec 2025) ✅
-1. **FIX 1 (CRITICAL) - Text input fallback** - Added FormattedText and ChatInput components. When backend returns no ui_type, shows formatted message + text input so user can always respond
-2. **FIX 2 - Defensive data parsing** - All components handle alternate field names (meal/meal_label, sources/available_sources, cuts/cut_options, etc.)
-3. **FIX 3 - Protein badge on cards** - Already implemented with 6.5g/egg and Xg/100g displays
-4. **FIX 4 - Distribution badge stale values** - CollapsedBadge now accepts msgs array to find latest confirmed budget from subsequent messages
-5. **FIX 5 - Edit button on meal badges** - MealBadge now has optional "Edit" link to change locked meal
-6. **FIX 6 - send() safety** - All send functions now safely handle string, object, or other input types
-7. **FIX 7 - CTA disable after click** - All interactive components have isSubmitting/locked state with loading indicators
-
 ---
 
 ## Prioritized Backlog
 
 ### P0 - Critical
-- None currently (all P0 bugs fixed)
+- ✅ All P0 bugs fixed - no crashes from .map() calls
 
 ### P1 - High Priority
 - Full E2E testing when n8n API is functional
@@ -104,7 +114,7 @@ Build a React mobile-first web app called "Protein Planner v2" - a guided wizard
 ## File Structure
 ```
 /app/frontend/src/
-├── App.js          # All components, state, API calls, styles (~900 lines)
+├── App.js          # All components, state, API calls, styles (~1600 lines)
 └── index.js        # React entry point
 ```
 
@@ -113,6 +123,9 @@ Build a React mobile-first web app called "Protein Planner v2" - a guided wizard
 ---
 
 ## Testing Status
-- **Code Review:** All 6 bug fixes verified ✅
-- **Functional Testing:** Blocked by n8n API empty responses
-- **Test Reports:** `/app/test_reports/iteration_1.json`, `/app/test_reports/iteration_2.json`
+- **Code Review:** All defensive Array.isArray() guards verified ✅
+- **CTA Button Disable:** Double-click blocking verified ✅
+- **Agent 2 → Agent 3 Transition:** Code logic verified ✅
+- **Fallback Text Input:** ChatInput component verified ✅
+- **Functional Testing:** Frontend success rate 100%, external n8n API returns empty responses
+- **Test Reports:** `/app/test_reports/iteration_1.json`, `/app/test_reports/iteration_2.json`, `/app/test_reports/iteration_3.json`
