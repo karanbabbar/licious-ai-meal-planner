@@ -1195,8 +1195,8 @@ const MealPlanningWizard = ({ sessionId, onComplete, onRestart }) => {
     }
   };
 
-  // FIX 1: Known ui_types that have visual components
-  const knownUiTypes = ['budget_setup', 'source_select', 'cut_select', 'product_select', 'portion_confirm', 'meal_confirmed'];
+  // FIX 1: Known ui_types that have visual components (merged Agent 2 + Agent 3)
+  const knownUiTypes = ['budget_setup', 'source_select', 'cut_select', 'product_select', 'portion_confirm', 'meal_confirmed', 'weekly_summary', 'delivery_select', 'order_confirmed'];
 
   const renderUI = (msg, isLatest) => {
     const uiType = msg.data?.ui_type;
@@ -1211,6 +1211,10 @@ const MealPlanningWizard = ({ sessionId, onComplete, onRestart }) => {
         case 'product_select': return <ProductCardGrid data={uiData} onSelect={send} />;
         case 'portion_confirm': return <PortionConfirmCard data={uiData} onConfirm={send} />;
         case 'meal_confirmed': return <MealBadge data={uiData} onEdit={send} />;
+        // New merged Agent 3 ui_types
+        case 'weekly_summary': return <WeeklySummary data={uiData} onContinue={send} />;
+        case 'delivery_select': return <TimeSlotSelect data={uiData} onSelect={send} />;
+        case 'order_confirmed': return <OrderConfirmed data={uiData} />;
         default: return null;
       }
     }
