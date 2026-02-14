@@ -562,6 +562,15 @@ const SourceChips = ({ data, onSelect }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const maxSources = 3;
   
+  // Defensive: handle alternate field names from backend
+  const mealLabel = data.meal_label || data.meal || "Meal";
+  const proteinTarget = data.protein_target || data.target || 0;
+  const rawSources = data.available_sources || data.sources || [];
+  const iconMap = { eggs: "🥚", chicken: "🍗", fish: "🐟", mutton: "🥩" };
+  const sources = rawSources.map(s => 
+    typeof s === 'string' ? { name: s, icon: iconMap[s.toLowerCase()] || "🍖" } : s
+  );
+  
   const handleSubmit = () => {
     if (selected.length === 0 || isSubmitting) return;
     setIsSubmitting(true);
@@ -570,11 +579,11 @@ const SourceChips = ({ data, onSelect }) => {
   
   return (
     <div className="si" style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
-      <p style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 4 }}>{data.meal_label}</p>
-      <p style={{ fontSize: 11, color: T.g[400], marginBottom: 4 }}>{data.protein_target}g protein target</p>
+      <p style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 4 }}>{mealLabel}</p>
+      <p style={{ fontSize: 11, color: T.g[400], marginBottom: 4 }}>{proteinTarget}g protein target</p>
       <p style={{ fontSize: 12, color: T.g[400], marginBottom: 12 }}>Choose up to 3 sources for this meal</p>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-        {(data.available_sources || []).map(s => {
+        {sources.map(s => {
           const isSelected = selected.includes(s.name);
           const canSelect = selected.length < maxSources || isSelected;
           return (
