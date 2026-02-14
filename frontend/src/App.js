@@ -613,6 +613,13 @@ const PortionConfirmCard = ({ data, onConfirm }) => {
   const [utilization, setUtilization] = useState({});
   const total = (data.portions || []).reduce((s, p) => s + p.protein_g, 0);
   
+  const handleConfirm = () => {
+    // Convert utilization object to message string
+    const utilizationMsg = Object.entries(utilization).map(([product, choice]) => `${product}: ${choice}`).join(", ");
+    const msg = `Lock ${data.meal_label}, utilization: ${utilizationMsg}`;
+    onConfirm(msg);
+  };
+  
   return (
     <div className="si">
       {/* Portion Summary */}
@@ -674,7 +681,7 @@ const PortionConfirmCard = ({ data, onConfirm }) => {
         </div>
       )}
 
-      <Btn onClick={() => onConfirm(utilization)} full style={{ marginTop: 16 }}>
+      <Btn onClick={handleConfirm} full style={{ marginTop: 16 }}>
         Lock {data.meal_label} ✓
       </Btn>
     </div>
