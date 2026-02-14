@@ -1518,7 +1518,16 @@ const CartPreview = ({ data, onConfirm }) => {
 };
 
 const FinalCart = ({ data }) => {
-  const cart = data?.cart || [];
+  // DEFENSIVE: Ensure cart is always an array
+  let cart = data?.cart || [];
+  if (!Array.isArray(cart)) {
+    if (typeof cart === 'object' && cart !== null) {
+      cart = Object.values(cart);
+    } else {
+      cart = [];
+    }
+  }
+  
   const total = data?.total_cart_price || 0;
   const perDay = data?.price_per_day || 0;
   return (
@@ -1531,21 +1540,21 @@ const FinalCart = ({ data }) => {
         </div>
       </div>
       <div style={{ padding: "0 14px", marginTop: -22 }}>
-        {cart.map((item, i) => <div key={i} className={"up" + Math.min(i, 4)} style={{ marginBottom: 10, background: T.white, borderRadius: T.r.l, border: "1px solid " + T.g[100], boxShadow: T.sh.m, overflow: "hidden" }}>
+        {(Array.isArray(cart) ? cart : []).map((item, i) => <div key={i} className={"up" + Math.min(i, 4)} style={{ marginBottom: 10, background: T.white, borderRadius: T.r.l, border: "1px solid " + T.g[100], boxShadow: T.sh.m, overflow: "hidden" }}>
           <div style={{ display: "flex", gap: 12, padding: 12 }}>
             <div style={{ width: 68, height: 68, borderRadius: T.r.m, background: T.g[100], overflow: "hidden", flexShrink: 0 }}>
-              {item.image_url ? <img src={item.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { e.target.style.display = "none"; }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26 }}>🥩</div>}
+              {item?.image_url ? <img src={item.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { e.target.style.display = "none"; }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26 }}>🥩</div>}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <h4 style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 2, lineHeight: 1.3 }}>{item.product_name}</h4>
-              <p style={{ fontSize: 11, color: T.g[500], marginBottom: 5 }}>{item.pack_size_label + " x " + item.packs_needed}</p>
+              <h4 style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 2, lineHeight: 1.3 }}>{item?.product_name || 'Product'}</h4>
+              <p style={{ fontSize: 11, color: T.g[500], marginBottom: 5 }}>{(item?.pack_size_label || '') + " x " + (item?.packs_needed || 1)}</p>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 16, fontWeight: 800, color: T.brand, fontFamily: mono }}>{"₹" + item.total_price}</span>
-                {item.product_page_url && <a href={item.product_page_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, fontWeight: 700, color: T.brand, textDecoration: "none", padding: "2px 8px", borderRadius: T.r.full, background: T.brandLt }}>View on Licious</a>}
+                <span style={{ fontSize: 16, fontWeight: 800, color: T.brand, fontFamily: mono }}>{"₹" + (item?.total_price || 0)}</span>
+                {item?.product_page_url && <a href={item.product_page_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, fontWeight: 700, color: T.brand, textDecoration: "none", padding: "2px 8px", borderRadius: T.r.full, background: T.brandLt }}>View on Licious</a>}
               </div>
             </div>
           </div>
-          {item.usage_description && <div style={{ padding: "6px 12px", background: T.g[50], borderTop: "1px solid " + T.g[100], fontSize: 11, color: T.g[500], fontWeight: 500 }}>{"📋 " + item.usage_description}</div>}
+          {item?.usage_description && <div style={{ padding: "6px 12px", background: T.g[50], borderTop: "1px solid " + T.g[100], fontSize: 11, color: T.g[500], fontWeight: 500 }}>{"📋 " + item.usage_description}</div>}
         </div>)}
       </div>
       <div style={{ padding: "20px 20px 36px" }}>
