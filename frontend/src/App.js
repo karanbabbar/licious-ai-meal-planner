@@ -995,10 +995,8 @@ const PortionConfirmCard = ({ data, onConfirm }) => {
   const handleConfirm = () => {
     if (locked) return;
     setLocked(true);
-    // Convert utilization object to message string
-    const utilizationMsg = Object.entries(utilization || {}).map(([product, choice]) => `${product}: ${choice}`).join(", ");
-    const msg = `Lock ${mealLabel}, utilization: ${utilizationMsg}`;
-    onConfirm(msg);
+    // Send structured JSON instead of text
+    onConfirm({ utilization: utilization || {} });
   };
   
   return (
