@@ -1416,21 +1416,34 @@ const DeliverySelect = ({ data, onSelect }) => {
     onSelect(option);
   };
   
+  // DEFENSIVE: Ensure options is always an array
+  let options = data?.options || ['Single delivery', 'Multiple deliveries'];
+  if (!Array.isArray(options)) {
+    if (typeof options === 'object' && options !== null) {
+      options = Object.values(options);
+    } else if (typeof options === 'string') {
+      options = [options];
+    } else {
+      options = ['Single delivery', 'Multiple deliveries'];
+    }
+  }
+  
   return (
     <div className="si" style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
       <p style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 12 }}>Delivery preference</p>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {(data.options || ['Single delivery', 'Multiple deliveries']).map(opt => {
-          const isSelected = selected === opt;
+        {(Array.isArray(options) ? options : []).map((opt, idx) => {
+          const optStr = typeof opt === 'string' ? opt : String(opt || '');
+          const isSelected = selected === optStr;
           return (
-            <button key={opt} onClick={() => handleSelect(opt)} disabled={isSubmitting} style={{
+            <button key={optStr + idx} onClick={() => handleSelect(optStr)} disabled={isSubmitting} style={{
               display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 14,
               border: "2px solid " + (isSelected ? T.brand : T.g[200]), background: isSelected ? T.brandLt : T.white,
               cursor: isSubmitting ? "not-allowed" : "pointer", textAlign: "left",
               opacity: isSubmitting && !isSelected ? 0.5 : 1,
             }}>
-              <span style={{ fontSize: 20 }}>{opt.includes('Single') ? '📦' : '📦📦'}</span>
-              <span style={{ flex: 1, fontSize: 14, fontWeight: isSelected ? 700 : 500, color: isSelected ? T.brand : T.dark }}>{opt}</span>
+              <span style={{ fontSize: 20 }}>{optStr.includes('Single') ? '📦' : '📦📦'}</span>
+              <span style={{ flex: 1, fontSize: 14, fontWeight: isSelected ? 700 : 500, color: isSelected ? T.brand : T.dark }}>{optStr}</span>
               {isSelected && <div style={{ width: 20, height: 20, borderRadius: "50%", background: T.brand, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 {isSubmitting ? <div style={{ width: 12, height: 12, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin .6s linear infinite" }} /> : <span style={{ color: "#fff", fontSize: 11 }}>✓</span>}
               </div>}
