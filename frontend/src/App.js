@@ -1008,24 +1008,35 @@ const PortionConfirmCard = ({ data, onConfirm }) => {
   );
 };
 
-const MealBadge = ({ data }) => {
+const MealBadge = ({ data, onEdit }) => {
   // Defensive: handle alternate field names from backend
   const mealLabel = data.meal_label || data.meal || "Meal";
   const totalProtein = data.total_protein || data.protein || 0;
   const runningPrice = data.running_price || data.price || data.total_price || 0;
   
   return (
-    <div className="si" style={{ padding: "12px 16px", background: T.greenLt, borderRadius: 14, border: "1px solid " + T.green + "20", display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <div style={{ width: 28, height: 28, borderRadius: "50%", background: T.green, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <span style={{ color: "#fff", fontSize: 13 }}>✓</span>
+    <div className="si" style={{ padding: "12px 16px", background: T.greenLt, borderRadius: 14, border: "1px solid " + T.green + "20", marginTop: 8 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ width: 28, height: 28, borderRadius: "50%", background: T.green, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ color: "#fff", fontSize: 13 }}>✓</span>
+          </div>
+          <div>
+            <span style={{ fontSize: 13, fontWeight: 700, color: T.green }}>{mealLabel} locked</span>
+            <span style={{ fontSize: 11, color: T.g[500], display: "block" }}>{Math.round(totalProtein * 10) / 10}g protein</span>
+          </div>
         </div>
-        <div>
-          <span style={{ fontSize: 13, fontWeight: 700, color: T.green }}>{mealLabel} locked</span>
-          <span style={{ fontSize: 11, color: T.g[500], display: "block" }}>{Math.round(totalProtein * 10) / 10}g protein</span>
-        </div>
+        <span style={{ fontSize: 15, fontWeight: 800, color: T.dark, fontFamily: mono }}>₹{runningPrice}</span>
       </div>
-      <span style={{ fontSize: 15, fontWeight: 800, color: T.dark, fontFamily: mono }}>₹{runningPrice}</span>
+      {/* FIX 5: Edit button to change locked meal */}
+      {onEdit && (
+        <button 
+          onClick={() => onEdit(`I want to change my ${mealLabel.toLowerCase()}`)}
+          style={{ fontSize: 11, color: T.g[400], background: "none", border: "none", cursor: "pointer", textDecoration: "underline", marginTop: 8, padding: 0 }}
+        >
+          Edit {mealLabel.toLowerCase()}
+        </button>
+      )}
     </div>
   );
 };
