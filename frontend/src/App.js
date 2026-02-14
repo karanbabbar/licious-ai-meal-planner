@@ -1034,17 +1034,22 @@ const MealPlanningWizard = ({ sessionId, onComplete, onRestart }) => {
     }
   }, []);
 
-  const send = async (message) => {
-    // BUG FIX: Ensure message is always a string
-    const msgText = typeof message === 'string' ? message : (typeof message === 'object' ? JSON.stringify(message) : String(message));
-    if (!msgText.trim()) return;
+  // FIX 6: Safe send function that handles ALL input types
+  const send = async (input) => {
+    let text = '';
+    if (typeof input === 'string') text = input;
+    else if (typeof input === 'object' && input !== null) text = JSON.stringify(input);
+    else text = String(input || '');
     
-    setLastMessage(msgText.trim());
+    text = text.trim();
+    if (!text) return;
+    
+    setLastMessage(text);
     setError(null);
-    setMsgs(p => [...p, { role: "user", text: msgText.trim() }]);
+    setMsgs(p => [...p, { role: "user", text }]);
     setLoading(true);
     try {
-      const res = await fetch(ENDPOINTS.mealPlanning, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sessionId, message: msgText.trim() }) });
+      const res = await fetch(ENDPOINTS.mealPlanning, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sessionId, message: text }) });
       const raw = await res.text();
       
       // Check for empty response
@@ -1081,19 +1086,38 @@ const MealPlanningWizard = ({ sessionId, onComplete, onRestart }) => {
     }
   };
 
-  const renderUI = (msg) => {
-    const { ui_type, ui_data } = msg.data || {};
-    if (!ui_type || !ui_data) return null;
+  // FIX 1: Known ui_types that have visual components
+  const knownUiTypes = ['budget_setup', 'source_select', 'cut_select', 'product_select', 'portion_confirm', 'meal_confirmed'];
 
-    switch (ui_type) {
-      case 'budget_setup': return <DistributionSetup data={ui_data} onSelect={send} />;
-      case 'source_select': return <SourceChips data={ui_data} onSelect={send} />;
-      case 'cut_select': return <CutChips data={ui_data} onSelect={send} />;
-      case 'product_select': return <ProductCardGrid data={ui_data} onSelect={send} />;
-      case 'portion_confirm': return <PortionConfirmCard data={ui_data} onConfirm={send} />;
-      case 'meal_confirmed': return <MealBadge data={ui_data} />;
-      default: return null;
+  const renderUI = (msg, isLatest) => {
+    const uiType = msg.data?.ui_type;
+    const uiData = msg.data?.ui_data;
+    
+    // If we have a recognized ui_type with data, render the visual component
+    if (uiType && uiData && knownUiTypes.includes(uiType)) {
+      switch (uiType) {
+        case 'budget_setup': return <DistributionSetup data={uiData} onSelect={send} />;
+        case 'source_select': return <SourceChips data={uiData} onSelect={send} />;
+        case 'cut_select': return <CutChips data={uiData} onSelect={send} />;
+        case 'product_select': return <ProductCardGrid data={uiData} onSelect={send} />;
+        case 'portion_confirm': return <PortionConfirmCard data={uiData} onConfirm={send} />;
+        case 'meal_confirmed': return <MealBadge data={uiData} onEdit={send} />;
+        default: return null;
+      }
     }
+    
+    // FIX 1: FALLBACK - Show text + input for ANY unrecognized response (only for latest message)
+    if (isLatest) {
+      const text = msg.data?.message || msg.text || '';
+      return (
+        <div style={{ padding: "14px 16px", background: T.white, border: "1px solid " + T.g[100], borderRadius: 14, boxShadow: T.sh.s }}>
+          <FormattedText text={text} />
+          <ChatInput onSend={send} disabled={loading} />
+        </div>
+      );
+    }
+    
+    return null;
   };
 
   return (
@@ -1108,17 +1132,21 @@ const MealPlanningWizard = ({ sessionId, onComplete, onRestart }) => {
         {msgs.map((m, i) => {
           if (m.role === "bot") {
             const isLatestBot = i === msgs.length - 1 || (i === msgs.length - 2 && loading);
-            const ui = isLatestBot ? renderUI(m) : null;
             
             // Show collapsed badge for old bot messages with ui_type
             if (!isLatestBot && m.data?.ui_type) {
-              return <CollapsedBadge key={i} type={m.data.ui_type} data={m.data.ui_data || {}} fullData={m.data || {}} />;
+              return <CollapsedBadge key={i} type={m.data.ui_type} data={m.data.ui_data || {}} fullData={m.data || {}} msgs={msgs} msgIndex={i} />;
             }
+            
+            // For latest message OR old messages without ui_type, render normally
+            const ui = renderUI(m, isLatestBot);
             
             return (
               <div key={i} style={{ marginBottom: 12 }}>
-                <p style={{ fontSize: 12, color: T.g[400], marginBottom: 6, lineHeight: 1.4 }}>{m.text}</p>
-                {ui || <div style={{ padding: "10px 14px", background: T.white, border: "1px solid " + T.g[100], borderRadius: 14, fontSize: 13, lineHeight: 1.6, color: T.g[700], boxShadow: T.sh.s }}>{m.text}</div>}
+                {isLatestBot && m.text && !m.data?.ui_type && (
+                  <p style={{ fontSize: 12, color: T.g[400], marginBottom: 6, lineHeight: 1.4 }}>{m.text}</p>
+                )}
+                {ui}
               </div>
             );
           }
