@@ -931,24 +931,24 @@ const ProductCardGrid = ({ data, onSelect }) => {
       )}
       
       {/* Show already ordered products (from previous meals) */}
-      {alreadyOrderedProducts.length > 0 && (
+      {(Array.isArray(alreadyOrderedProducts) ? alreadyOrderedProducts : []).length > 0 && (
         <div style={{ marginBottom: 16, padding: 12, background: T.greenLt, borderRadius: 12, border: "1px solid " + T.green + "20" }}>
           <p style={{ fontSize: 11, fontWeight: 700, color: T.green, marginBottom: 6 }}>✓ Already in your order</p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {alreadyOrderedProducts.map((p, i) => (
+            {(Array.isArray(alreadyOrderedProducts) ? alreadyOrderedProducts : []).map((p, i) => (
               <span key={i} style={{ fontSize: 11, fontWeight: 600, color: T.g[600], padding: "4px 10px", background: T.white, borderRadius: 99, border: "1px solid " + T.g[200] }}>
-                {p.product_name}
+                {p?.product_name || 'Product'}
               </span>
             ))}
           </div>
         </div>
       )}
       
-      {Object.entries(productsByCategory).map(([category, products]) => renderCategoryGroup(category, products))}
+      {Object.entries(productsByCategory || {}).map(([category, products]) => renderCategoryGroup(category, products))}
       
-      {sourcesWithoutSelection.length > 0 && selected.length > 0 && (
+      {(Array.isArray(sourcesWithoutSelection) ? sourcesWithoutSelection : []).length > 0 && selected.length > 0 && (
         <div style={{ padding: "8px 12px", background: T.blueLt, borderRadius: 10, fontSize: 12, color: T.blue, marginTop: 8 }}>
-          💡 Don't forget to pick a {sourcesWithoutSelection.join(" and ")} product too!
+          💡 Don't forget to pick a {(Array.isArray(sourcesWithoutSelection) ? sourcesWithoutSelection : []).join(" and ")} product too!
         </div>
       )}
       
