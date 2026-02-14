@@ -358,12 +358,18 @@ const Results = ({ data, onContinue }) => {
 // VISUAL MEAL PLANNING COMPONENTS (backend-driven)
 
 // Collapsed Badge for previous responses
-const CollapsedBadge = ({ type, data }) => {
+const CollapsedBadge = ({ type, data, fullData }) => {
   let text = "";
   switch (type) {
     case 'budget_setup':
-      const dist = (data.distributions || []).find(d => d.label);
-      text = dist ? `✓ ${dist.label} — ${dist.breakfast}g / ${dist.lunch}g / ${dist.dinner}g` : "✓ Distribution set";
+      // BUG FIX: Read from budget.distribution or ui_data
+      const dist = fullData?.budget?.distribution;
+      const label = data?.distributions?.[0]?.label || 'Distribution';
+      if (dist && dist.breakfast !== undefined) {
+        text = `✓ ${label} — ${dist.breakfast}g / ${dist.lunch}g / ${dist.dinner}g`;
+      } else {
+        text = "✓ Distribution confirmed";
+      }
       break;
     case 'source_select':
       text = "✓ Sources selected";
@@ -372,13 +378,15 @@ const CollapsedBadge = ({ type, data }) => {
       text = "✓ Cut type selected";
       break;
     case 'product_select':
-      text = `✓ ${(data.products || []).length} product options shown`;
+      const productCount = (data?.products || []).length;
+      text = productCount > 0 ? `✓ ${productCount} product${productCount === 1 ? '' : 's'} selected` : "✓ Products selected";
       break;
     case 'portion_confirm':
-      text = `✓ ${data.meal_label} portions confirmed`;
+      text = data?.meal_label ? `✓ ${data.meal_label} portions confirmed` : "✓ Portions confirmed";
       break;
     case 'meal_confirmed':
-      text = `✓ ${data.meal_label} locked — ${data.total_protein}g protein`;
+      const protein = data?.total_protein ? Math.round(data.total_protein * 10) / 10 : 0;
+      text = data?.meal_label ? `✓ ${data.meal_label} locked — ${protein}g protein` : "✓ Meal locked";
       break;
     default:
       text = "✓ Step completed";
