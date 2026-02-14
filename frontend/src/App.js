@@ -772,6 +772,18 @@ const MealBadge = ({ data }) => {
   );
 };
 
+// Error Retry Component
+const ErrorRetry = ({ onRetry }) => (
+  <div className="si" style={{ padding: 20, background: T.white, borderRadius: 16, border: "1px solid " + T.brand + "30", boxShadow: T.sh.m, marginTop: 8, textAlign: "center" }}>
+    <div style={{ width: 48, height: 48, borderRadius: "50%", background: T.brandLt, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px", fontSize: 22 }}>⚠️</div>
+    <p style={{ fontSize: 14, fontWeight: 700, color: T.dark, marginBottom: 4 }}>Something went wrong</p>
+    <p style={{ fontSize: 12, color: T.g[500], marginBottom: 16 }}>Unable to connect. Please try again.</p>
+    <button onClick={onRetry} style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 24px", borderRadius: T.r.l, background: T.brandLt, border: "2px solid " + T.brand, color: T.brand, fontSize: 14, fontWeight: 700, cursor: "pointer", transition: "all .2s" }}>
+      <span style={{ fontSize: 16 }}>↻</span> Tap to retry
+    </button>
+  </div>
+);
+
 // MEAL PLANNING WIZARD (replaces ChatScreen for Agent 2)
 const MealPlanningWizard = ({ sessionId, onComplete, onRestart }) => {
   const [msgs, setMsgs] = useState([]);
