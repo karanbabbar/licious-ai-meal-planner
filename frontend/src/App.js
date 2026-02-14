@@ -466,17 +466,47 @@ const DistributionSetup = ({ data, onSelect }) => {
 
 const SourceChips = ({ data, onSelect }) => {
   const [selected, setSelected] = useState([]);
+  const maxSources = 3;
   
   return (
     <div className="si" style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
       <p style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 4 }}>{data.meal_label}</p>
-      <p style={{ fontSize: 11, color: T.g[400], marginBottom: 12 }}>{data.protein_target}g protein target</p>
-      <PillSelect 
-        options={(data.available_sources || []).map(s => ({ label: s.name, value: s.name, icon: s.icon }))}
-        value={selected}
-        onChange={setSelected}
-        multi={true}
-      />
+      <p style={{ fontSize: 11, color: T.g[400], marginBottom: 4 }}>{data.protein_target}g protein target</p>
+      <p style={{ fontSize: 12, color: T.g[400], marginBottom: 12 }}>Choose up to 3 sources for this meal</p>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        {(data.available_sources || []).map(s => {
+          const isSelected = selected.includes(s.name);
+          const canSelect = selected.length < maxSources || isSelected;
+          return (
+            <button 
+              key={s.name} 
+              onClick={() => {
+                if (isSelected) {
+                  setSelected(prev => prev.filter(n => n !== s.name));
+                } else if (canSelect) {
+                  setSelected(prev => [...prev, s.name]);
+                }
+              }}
+              disabled={!canSelect && !isSelected}
+              style={{ 
+                display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: T.r.full, 
+                border: "2px solid " + (isSelected ? T.brand : T.g[200]), 
+                background: isSelected ? T.brandLt : T.white, 
+                color: isSelected ? T.brand : T.g[700], 
+                fontSize: 14, fontWeight: isSelected ? 700 : 500, 
+                cursor: canSelect ? "pointer" : "not-allowed", 
+                transition: "all .2s", 
+                whiteSpace: "nowrap",
+                opacity: (!canSelect && !isSelected) ? 0.4 : 1
+              }}
+            >
+              {s.icon && <span style={{ fontSize: 18 }}>{s.icon}</span>}
+              {s.name}
+              {isSelected && "  ✓"}
+            </button>
+          );
+        })}
+      </div>
       <Btn onClick={() => onSelect(selected.join(" and "))} full disabled={selected.length === 0} style={{ marginTop: 16 }}>
         Continue →
       </Btn>
