@@ -460,6 +460,21 @@ const DistributionSetup = ({ data, onSelect }) => {
   const [supplementGrams, setSupplementGrams] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // Convert distributions from object to array if needed
+  let distributions = data.distributions || [];
+  if (!Array.isArray(distributions)) {
+    const iconMap = { equal: "⚖️", heavy_breakfast: "🌅", heavy_lunch: "☀️", heavy_dinner: "🌙", custom: "🎯" };
+    const labelMap = { equal: "Equal", heavy_breakfast: "Heavy Breakfast", heavy_lunch: "Heavy Lunch", heavy_dinner: "Heavy Dinner", custom: "Custom" };
+    distributions = Object.entries(distributions).map(([key, values]) => ({
+      label: labelMap[key] || key,
+      icon: iconMap[key] || "⚖️",
+      breakfast: values?.breakfast || values?.[0] || 0,
+      lunch: values?.lunch || values?.[1] || 0,
+      dinner: values?.dinner || values?.[2] || 0,
+      ...values
+    }));
+  }
+  
   // Use fallback calculation if API returns 0 values
   const getDistributionValues = (d) => {
     if (d.breakfast > 0 || d.lunch > 0 || d.dinner > 0) {
@@ -496,7 +511,7 @@ const DistributionSetup = ({ data, onSelect }) => {
       
       <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>How to split your {data.protein_target}g protein?</p>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        {(data.distributions || []).map(d => {
+        {distributions.map(d => {
           const colors = [T.brand, T.green, T.blue];
           const meals = ["Bfast", "Lunch", "Dinner"];
           const values = getDistributionValues(d);
