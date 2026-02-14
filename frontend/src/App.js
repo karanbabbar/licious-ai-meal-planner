@@ -453,14 +453,38 @@ const calculateDistribution = (label, target) => {
 };
 
 // Collapsed Badge for previous responses
-const CollapsedBadge = ({ type, data, fullData }) => {
+// FIX 4: Now accepts msgs array to look for latest confirmed budget values
+const CollapsedBadge = ({ type, data, fullData, msgs = [], msgIndex = 0 }) => {
   let text = "";
   switch (type) {
     case 'budget_setup':
-      // Try multiple sources for distribution values
-      const dist = fullData?.budget?.distribution || data?.budget?.distribution;
-      const selectedLabel = fullData?.budget?.selected_distribution || data?.selected_distribution || data?.distributions?.[0]?.label || 'Distribution';
-      const proteinTarget = fullData?.budget?.meal_budget_g || data?.protein_target || 150;
+      // FIX 4: Look for the confirmed distribution in subsequent messages
+      let dist = null;
+      let selectedLabel = 'Distribution';
+      let proteinTarget = 150;
+      
+      // First try to find confirmed budget in subsequent messages
+      for (let i = msgIndex + 1; i < msgs.length; i++) {
+        const m = msgs[i];
+        if (m.data?.budget?.distribution && m.data?.budget?.confirmed) {
+          dist = m.data.budget.distribution;
+          selectedLabel = m.data.budget.selected_distribution || selectedLabel;
+          proteinTarget = m.data.budget.meal_budget_g || proteinTarget;
+          break;
+        }
+        if (m.data?.budget?.distribution) {
+          dist = m.data.budget.distribution;
+          selectedLabel = m.data.budget.selected_distribution || selectedLabel;
+          proteinTarget = m.data.budget.meal_budget_g || proteinTarget;
+        }
+      }
+      
+      // Fallback to current message data
+      if (!dist) {
+        dist = fullData?.budget?.distribution || data?.budget?.distribution;
+        selectedLabel = fullData?.budget?.selected_distribution || data?.selected_distribution || data?.distributions?.[0]?.label || 'Distribution';
+        proteinTarget = fullData?.budget?.meal_budget_g || data?.protein_target || 150;
+      }
       
       // Check if we have valid (non-zero) values
       if (dist && dist.breakfast > 0) {
