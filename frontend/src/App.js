@@ -119,6 +119,161 @@ const ChatInput = ({ onSend, disabled }) => {
   );
 };
 
+// V3: Running Cost Banner - persistent display during meal planning
+const RunningCostBanner = ({ dailyCost, weeklyCost }) => {
+  if (!dailyCost && !weeklyCost) return null;
+  return (
+    <div style={{ 
+      position: "sticky", top: 0, zIndex: 10,
+      padding: "10px 16px", 
+      background: "linear-gradient(135deg, " + T.dark + ", " + T.charcoal + ")",
+      borderRadius: T.r.m, 
+      marginBottom: 12,
+      display: "flex", 
+      justifyContent: "space-between", 
+      alignItems: "center",
+      boxShadow: T.sh.m
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ fontSize: 14 }}>💰</span>
+        <span style={{ fontSize: 12, fontWeight: 600, color: T.g[300] }}>Daily</span>
+        <span style={{ fontSize: 14, fontWeight: 800, color: T.white, fontFamily: mono }}>₹{dailyCost || 0}</span>
+      </div>
+      <div style={{ height: 16, width: 1, background: T.g[600] }} />
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: T.g[300] }}>Weekly</span>
+        <span style={{ fontSize: 14, fontWeight: 800, color: T.green, fontFamily: mono }}>₹{weeklyCost || 0}</span>
+      </div>
+    </div>
+  );
+};
+
+// V3: NEW - Supplement Ask Component (first screen of meal planning)
+const SupplementAsk = ({ data, onSelect }) => {
+  const [selected, setSelected] = useState(null);
+  const [customAmount, setCustomAmount] = useState("");
+  const [showCustomInput, setShowCustomInput] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const originalProtein = data?.original_protein || 150;
+  const mealsPerDay = data?.meals_per_day || 3;
+  
+  // DEFENSIVE: Ensure options is always an array
+  let options = data?.options || [];
+  if (!Array.isArray(options)) {
+    options = [
+      { label: "No supplements", value: "none", grams: 0 },
+      { label: "25g (1 scoop whey)", value: "25", grams: 25 },
+      { label: "30g supplement", value: "30", grams: 30 },
+      { label: "50g supplement", value: "50", grams: 50 },
+      { label: "Custom amount", value: "custom", grams: 0 }
+    ];
+  }
+  
+  const handleOptionSelect = (opt) => {
+    if (isSubmitting) return;
+    
+    if (opt.value === "custom") {
+      setShowCustomInput(true);
+      setSelected("custom");
+    } else {
+      setSelected(opt.value);
+      setIsSubmitting(true);
+      onSelect({ supplement_grams: opt.grams || 0 });
+    }
+  };
+  
+  const handleCustomSubmit = () => {
+    if (isSubmitting || !customAmount) return;
+    setIsSubmitting(true);
+    onSelect({ supplement_grams: Number(customAmount) || 0 });
+  };
+  
+  return (
+    <div className="si" style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
+      <div style={{ textAlign: "center", marginBottom: 16 }}>
+        <div style={{ width: 48, height: 48, borderRadius: "50%", background: T.brandLt, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px", fontSize: 22 }}>🥤</div>
+        <p style={{ fontSize: 11, fontWeight: 700, color: T.g[500], textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Your daily protein target</p>
+        <p style={{ fontSize: 28, fontWeight: 800, color: T.brand, fontFamily: mono }}>{originalProtein}g</p>
+        <p style={{ fontSize: 11, color: T.g[400], marginTop: 4 }}>{mealsPerDay} meals per day</p>
+      </div>
+      
+      <p style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 4 }}>Do you take protein supplements?</p>
+      <p style={{ fontSize: 12, color: T.g[500], marginBottom: 14 }}>We'll deduct this from your food-based protein plan.</p>
+      
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {(Array.isArray(options) ? options : []).map((opt, idx) => {
+          const isSelected = selected === opt.value;
+          const isCustom = opt.value === "custom";
+          
+          return (
+            <button 
+              key={opt.value || idx} 
+              onClick={() => handleOptionSelect(opt)}
+              disabled={isSubmitting && !isCustom}
+              style={{
+                display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderRadius: 14,
+                border: "2px solid " + (isSelected ? T.brand : T.g[200]), 
+                background: isSelected ? T.brandLt : T.white,
+                cursor: isSubmitting ? "not-allowed" : "pointer", 
+                textAlign: "left",
+                opacity: isSubmitting && !isSelected ? 0.5 : 1,
+                transition: "all .2s"
+              }}
+            >
+              <div style={{ 
+                width: 20, height: 20, borderRadius: "50%", 
+                border: "2px solid " + (isSelected ? T.brand : T.g[300]),
+                background: isSelected ? T.brand : "transparent",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                flexShrink: 0
+              }}>
+                {isSelected && !isCustom && (isSubmitting 
+                  ? <div style={{ width: 10, height: 10, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin .6s linear infinite" }} />
+                  : <span style={{ color: "#fff", fontSize: 10 }}>✓</span>
+                )}
+              </div>
+              <div style={{ flex: 1 }}>
+                <span style={{ fontSize: 14, fontWeight: isSelected ? 700 : 500, color: isSelected ? T.brand : T.dark }}>{opt.label}</span>
+                {opt.grams > 0 && <span style={{ fontSize: 11, color: T.g[400], marginLeft: 8 }}>({originalProtein - opt.grams}g from food)</span>}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      
+      {showCustomInput && (
+        <div className="si" style={{ marginTop: 12, padding: 12, background: T.g[50], borderRadius: 12, border: "1px solid " + T.g[200] }}>
+          <label style={{ fontSize: 12, fontWeight: 600, color: T.g[600], marginBottom: 6, display: "block" }}>
+            Enter supplement amount (grams/day)
+          </label>
+          <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ flex: 1, display: "flex", alignItems: "center", border: "2px solid " + T.g[200], borderRadius: 10, background: T.white, overflow: "hidden" }}>
+              <input 
+                type="number" 
+                placeholder="e.g. 35" 
+                value={customAmount} 
+                onChange={e => setCustomAmount(e.target.value)}
+                disabled={isSubmitting}
+                style={{ flex: 1, padding: "10px 12px", border: "none", fontSize: 16, fontWeight: 600, background: "transparent", color: T.dark }}
+              />
+              <span style={{ padding: "0 12px", fontSize: 13, fontWeight: 600, color: T.g[400] }}>g</span>
+            </div>
+            <Btn onClick={handleCustomSubmit} disabled={!customAmount || isSubmitting} loading={isSubmitting}>
+              Confirm
+            </Btn>
+          </div>
+          {customAmount && (
+            <p style={{ fontSize: 11, color: T.g[500], marginTop: 8 }}>
+              You'll need <strong style={{ color: T.brand }}>{originalProtein - Number(customAmount)}g</strong> protein from food
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const RankingUI = ({ value, onChange }) => {
   const defaults = ["Chicken", "Eggs", "Fish", "Mutton"];
   const icons = { Chicken: "🍗", Eggs: "🥚", Fish: "🐟", Mutton: "🥩" };
