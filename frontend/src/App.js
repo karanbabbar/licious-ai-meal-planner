@@ -798,14 +798,21 @@ const DistributionSetup = ({ data, onSelect }) => {
   );
 };
 
+// V3: Source Select Component - multi-select with carried portions info
 const SourceChips = ({ data, onSelect }) => {
   const [selected, setSelected] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const maxSources = 3;
   
-  // Defensive: handle alternate field names from backend
+  // V3: Handle ui_data fields
   const mealLabel = data?.meal_label || data?.meal || "Meal";
   const proteinTarget = data?.protein_target || data?.target || 0;
+  
+  // V3: Carried portions from leftover packs
+  const carriedPortions = data?.carried_portions || [];
+  const carriedProtein = (Array.isArray(carriedPortions) ? carriedPortions : [])
+    .reduce((sum, p) => sum + (p?.protein_g || 0), 0);
+  const remainingTarget = Math.max(0, proteinTarget - carriedProtein);
   
   // DEFENSIVE: Ensure rawSources is always an array
   let rawSources = data?.available_sources || data?.sources || [];
@@ -819,60 +826,91 @@ const SourceChips = ({ data, onSelect }) => {
     }
   }
   
-  const iconMap = { eggs: "🥚", chicken: "🍗", fish: "🐟", mutton: "🥩" };
+  const iconMap = { eggs: "🥚", chicken: "🍗", fish: "🐟", mutton: "🍖" };
   const sources = rawSources.map(s => 
-    typeof s === 'string' ? { name: s, icon: iconMap[(s || '').toLowerCase()] || "🍖" } : (s || { name: 'Unknown', icon: '🍖' })
+    typeof s === 'string' 
+      ? { name: s, icon: iconMap[(s || '').toLowerCase()] || "🍖" } 
+      : { name: s?.name || 'Unknown', icon: s?.icon || iconMap[(s?.name || '').toLowerCase()] || '🍖' }
   );
   
   const handleSubmit = () => {
     if (selected.length === 0 || isSubmitting) return;
     setIsSubmitting(true);
-    // Send structured JSON instead of text
+    // V3: Send sources array
     onSelect({ sources: selected });
   };
   
   return (
     <div className="si" style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
-      <p style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 4 }}>{mealLabel}</p>
-      <p style={{ fontSize: 11, color: T.g[400], marginBottom: 4 }}>{proteinTarget}g protein target</p>
-      <p style={{ fontSize: 12, color: T.g[400], marginBottom: 12 }}>Choose up to 3 sources for this meal</p>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+        <div style={{ 
+          width: 36, height: 36, borderRadius: 10, 
+          background: mealLabel === "Breakfast" ? T.brandLt : mealLabel === "Lunch" ? T.greenLt : T.blueLt,
+          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18
+        }}>
+          {mealLabel === "Breakfast" ? "🌅" : mealLabel === "Lunch" ? "☀️" : "🌙"}
+        </div>
+        <div>
+          <p style={{ fontSize: 15, fontWeight: 800, color: T.dark }}>{mealLabel}</p>
+          <p style={{ fontSize: 12, color: T.g[500] }}>{proteinTarget}g protein target</p>
+        </div>
+      </div>
+      
+      {/* V3: Show carried portions info */}
+      {carriedProtein > 0 && (
+        <div style={{ padding: "10px 12px", background: T.greenLt, borderRadius: 10, border: "1px solid " + T.green + "30", marginBottom: 14 }}>
+          <p style={{ fontSize: 12, fontWeight: 600, color: T.green }}>
+            ✓ {Math.round(carriedProtein * 10) / 10}g protein carried over from leftover packs
+          </p>
+          <p style={{ fontSize: 11, color: T.g[600], marginTop: 2 }}>
+            Need <strong>{remainingTarget}g</strong> more from new products
+          </p>
+        </div>
+      )}
+      
+      <p style={{ fontSize: 12, color: T.g[500], marginBottom: 12 }}>Choose 1-{maxSources} protein sources</p>
+      
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
         {(Array.isArray(sources) ? sources : []).map((s, idx) => {
-          const isSelected = selected.includes(s?.name);
+          const sourceName = (s?.name || '').toLowerCase();
+          const isSelected = selected.includes(sourceName);
           const canSelect = selected.length < maxSources || isSelected;
+          
           return (
             <button 
               key={(s?.name || idx) + idx} 
               onClick={() => {
                 if (isSubmitting) return;
                 if (isSelected) {
-                  setSelected(prev => prev.filter(n => n !== s?.name));
+                  setSelected(prev => prev.filter(n => n !== sourceName));
                 } else if (canSelect) {
-                  setSelected(prev => [...prev, s?.name]);
+                  setSelected(prev => [...prev, sourceName]);
                 }
               }}
               disabled={(!canSelect && !isSelected) || isSubmitting}
               style={{ 
-                display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: T.r.full, 
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+                padding: "14px 20px", borderRadius: 16, 
                 border: "2px solid " + (isSelected ? T.brand : T.g[200]), 
                 background: isSelected ? T.brandLt : T.white, 
-                color: isSelected ? T.brand : T.g[700], 
-                fontSize: 14, fontWeight: isSelected ? 700 : 500, 
                 cursor: (canSelect && !isSubmitting) ? "pointer" : "not-allowed", 
                 transition: "all .2s", 
-                whiteSpace: "nowrap",
-                opacity: ((!canSelect && !isSelected) || isSubmitting) ? 0.5 : 1
+                opacity: ((!canSelect && !isSelected) || isSubmitting) ? 0.5 : 1,
+                minWidth: 80
               }}
             >
-              {s?.icon && <span style={{ fontSize: 18 }}>{s.icon}</span>}
-              {s?.name || 'Unknown'}
-              {isSelected && "  ✓"}
+              <span style={{ fontSize: 28 }}>{s?.icon || "🍖"}</span>
+              <span style={{ fontSize: 13, fontWeight: isSelected ? 700 : 500, color: isSelected ? T.brand : T.dark, textTransform: "capitalize" }}>
+                {s?.name || 'Unknown'}
+              </span>
+              {isSelected && <span style={{ fontSize: 10, color: T.brand }}>✓ Selected</span>}
             </button>
           );
         })}
       </div>
+      
       <Btn onClick={handleSubmit} full disabled={selected.length === 0 || isSubmitting} loading={isSubmitting} style={{ marginTop: 16 }}>
-        {isSubmitting ? "Submitting..." : "Continue →"}
+        {isSubmitting ? "Submitting..." : `Continue with ${selected.length} source${selected.length !== 1 ? 's' : ''} →`}
       </Btn>
     </div>
   );
