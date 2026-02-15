@@ -677,13 +677,18 @@ const CollapsedBadge = ({ type, data, fullData, msgs = [], msgIndex = 0 }) => {
   );
 };
 
+// V3: Budget Setup Component - shows protein deduction math + distribution selection
 const DistributionSetup = ({ data, onSelect }) => {
   const [sel, setSel] = useState(null);
-  const [supplement, setSupplement] = useState(false);
-  const [supplementGrams, setSupplementGrams] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // DEFENSIVE: Convert distributions from object to array if needed, handle all edge cases
+  // V3: New fields from backend
+  const proteinTarget = data?.protein_target || 150;
+  const supplementG = data?.supplement_g || 0;
+  const originalProtein = data?.original_protein || proteinTarget + supplementG;
+  const mealsPerDay = data?.meals_per_day || 3;
+  
+  // DEFENSIVE: Convert distributions from object to array if needed
   let rawDistributions = data?.distributions || [];
   let distributions = [];
   
@@ -695,95 +700,96 @@ const DistributionSetup = ({ data, onSelect }) => {
     distributions = Object.entries(rawDistributions).map(([key, values]) => ({
       label: labelMap[key] || key,
       icon: iconMap[key] || "⚖️",
-      breakfast: values?.breakfast || values?.[0] || 0,
-      lunch: values?.lunch || values?.[1] || 0,
-      dinner: values?.dinner || values?.[2] || 0,
+      values: values,
       ...(typeof values === 'object' ? values : {})
     }));
   }
   
-  // Ensure distributions is an array after all transformations
-  if (!Array.isArray(distributions)) {
-    distributions = [];
-  }
+  if (!Array.isArray(distributions)) distributions = [];
   
-  const proteinTarget = data?.protein_target || 150;
-  
-  // Use fallback calculation if API returns 0 values
+  // Get distribution values - V3 format uses nested "values" object
   const getDistributionValues = (d) => {
-    if (d.breakfast > 0 || d.lunch > 0 || d.dinner > 0) {
+    // V3 format: { label, icon, values: { breakfast, lunch, dinner } }
+    if (d?.values?.breakfast !== undefined) {
+      return [d.values.breakfast || 0, d.values.lunch || 0, d.values.dinner || 0];
+    }
+    // Legacy format
+    if (d?.breakfast > 0 || d?.lunch > 0 || d?.dinner > 0) {
       return [d.breakfast || 0, d.lunch || 0, d.dinner || 0];
     }
-    // Fallback: calculate locally
-    const calculated = calculateDistribution(d.label, data.protein_target);
+    // Fallback calculation
+    const calculated = calculateDistribution(d?.label, proteinTarget);
     return [calculated.breakfast, calculated.lunch, calculated.dinner];
+  };
+  
+  const handleSelect = (d) => {
+    if (isSubmitting) return;
+    setSel(d.label);
+    setIsSubmitting(true);
+    // V3: Send just the distribution label - supplement was already handled in supplement_ask
+    onSelect({ distribution: d.label });
   };
   
   return (
     <div className="si" style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
-      <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Do you take protein supplements?</p>
-      <div style={{ display: "flex", gap: 8, marginBottom: supplement ? 12 : 20 }}>
-        <button onClick={() => setSupplement(false)} disabled={isSubmitting} style={{ flex: 1, padding: "11px 14px", borderRadius: 12, border: "2px solid " + (!supplement ? T.brand : T.g[200]), background: !supplement ? T.brandLt : T.white, color: !supplement ? T.brand : T.g[600], fontSize: 13, fontWeight: !supplement ? 700 : 500, cursor: isSubmitting ? "not-allowed" : "pointer", opacity: isSubmitting ? 0.5 : 1 }}>No supplements</button>
-        <button onClick={() => setSupplement(true)} disabled={isSubmitting} style={{ flex: 1, padding: "11px 14px", borderRadius: 12, border: "2px solid " + (supplement ? T.brand : T.g[200]), background: supplement ? T.brandLt : T.white, color: supplement ? T.brand : T.g[600], fontSize: 13, fontWeight: supplement ? 700 : 500, cursor: isSubmitting ? "not-allowed" : "pointer", opacity: isSubmitting ? 0.5 : 1 }}>Yes, I take</button>
+      {/* V3: Show protein deduction math */}
+      <div style={{ textAlign: "center", marginBottom: 16, padding: 14, background: T.g[50], borderRadius: 12 }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: T.g[500], textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Protein from food</p>
+        <p style={{ fontSize: 28, fontWeight: 800, color: T.brand, fontFamily: mono }}>{proteinTarget}g</p>
+        {supplementG > 0 && (
+          <p style={{ fontSize: 11, color: T.g[500], marginTop: 6 }}>
+            {originalProtein}g daily − {supplementG}g supplements = <strong style={{ color: T.brand }}>{proteinTarget}g</strong> from food
+          </p>
+        )}
       </div>
       
-      {supplement && (
-        <div className="si" style={{ marginBottom: 20 }}>
-          <label style={{ fontSize: 12, fontWeight: 600, color: T.g[600], marginBottom: 6, display: "block" }}>
-            How many grams per day?
-          </label>
-          <input 
-            type="number" 
-            placeholder="e.g. 30" 
-            value={supplementGrams} 
-            onChange={e => setSupplementGrams(e.target.value)}
-            disabled={isSubmitting}
-            style={{ width: "100%", padding: "12px 14px", border: "2px solid " + T.g[200], borderRadius: 14, fontSize: 16, fontWeight: 600, background: T.white, color: T.dark, opacity: isSubmitting ? 0.5 : 1 }}
-          />
-        </div>
-      )}
+      <p style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 4 }}>How to split across {mealsPerDay} meals?</p>
+      <p style={{ fontSize: 12, color: T.g[500], marginBottom: 14 }}>Choose a distribution pattern</p>
       
-      <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>How to split your {proteinTarget}g protein?</p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {(Array.isArray(distributions) ? distributions : []).map((d, idx) => {
           const colors = [T.brand, T.green, T.blue];
-          const meals = ["Bfast", "Lunch", "Dinner"];
+          const meals = ["Breakfast", "Lunch", "Dinner"];
           const values = getDistributionValues(d || {});
           const isSelected = sel === (d?.label || idx);
           
-          const handleSelect = () => {
-            if (isSubmitting) return;
-            setSel(d.label);
-            setIsSubmitting(true);
-            // Send structured JSON instead of text
-            onSelect({ 
-              distribution: d.label,
-              supplement_grams: supplement && supplementGrams ? Number(supplementGrams) : 0
-            });
-          };
-          
           return (
-            <button key={d.label} onClick={handleSelect} disabled={isSubmitting} style={{
-              display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 14,
-              border: "2px solid " + (isSelected ? T.brand : T.g[200]), background: isSelected ? T.brandLt : T.white,
-              cursor: isSubmitting ? "not-allowed" : "pointer", textAlign: "left",
+            <button key={d?.label || idx} onClick={() => handleSelect(d)} disabled={isSubmitting} style={{
+              display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 14,
+              border: "2px solid " + (isSelected ? T.brand : T.g[200]), 
+              background: isSelected ? T.brandLt : T.white,
+              cursor: isSubmitting ? "not-allowed" : "pointer", 
+              textAlign: "left",
               opacity: isSubmitting && !isSelected ? 0.5 : 1,
+              transition: "all .2s"
             }}>
-              <span style={{ fontSize: 22, flexShrink: 0 }}>{d.icon}</span>
+              <span style={{ fontSize: 24, flexShrink: 0 }}>{d?.icon || "⚖️"}</span>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: isSelected ? T.brand : T.dark, marginBottom: 6 }}>{d.label}</div>
-                <div style={{ display: "flex", gap: 2, height: 6 }}>
-                  {values.map((v, i) => (
-                    <div key={i} style={{ flex: v, height: "100%", borderRadius: 3, background: isSelected ? colors[i] : T.g[200], opacity: isSelected ? 1 : 0.5, transition: "all .3s" }} />
-                  ))}
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: isSelected ? T.brand : T.dark, marginBottom: 8 }}>{d?.label || "Option"}</div>
+                {/* V3: Show prominent numbers for each meal */}
+                <div style={{ display: "flex", gap: 6 }}>
                   {meals.map((m, i) => (
-                    <span key={m} style={{ fontSize: 10, color: isSelected ? colors[i] : T.g[400], fontWeight: 600 }}>{m} {values[i]}g</span>
+                    <div key={m} style={{ 
+                      flex: 1, 
+                      padding: "6px 8px", 
+                      background: isSelected ? colors[i] + "15" : T.g[100], 
+                      borderRadius: 8,
+                      textAlign: "center"
+                    }}>
+                      <span style={{ fontSize: 10, color: T.g[500], display: "block" }}>{m}</span>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: isSelected ? colors[i] : T.g[600], fontFamily: mono }}>{values[i]}g</span>
+                    </div>
                   ))}
                 </div>
               </div>
-              {isSelected && <div style={{ width: 20, height: 20, borderRadius: "50%", background: T.brand, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{isSubmitting ? <div style={{ width: 12, height: 12, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin .6s linear infinite" }} /> : <span style={{ color: "#fff", fontSize: 11 }}>✓</span>}</div>}
+              {isSelected && (
+                <div style={{ width: 22, height: 22, borderRadius: "50%", background: T.brand, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  {isSubmitting 
+                    ? <div style={{ width: 12, height: 12, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin .6s linear infinite" }} /> 
+                    : <span style={{ color: "#fff", fontSize: 11 }}>✓</span>
+                  }
+                </div>
+              )}
             </button>
           );
         })}
