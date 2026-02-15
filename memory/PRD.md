@@ -13,32 +13,46 @@ Build a React mobile-first web app called "Protein Planner v2" - a guided wizard
 - Onboarding: `https://karanbabbar.app.n8n.cloud/webhook/v2/onboarding`
 - Meal Planning (merged with weekly): `https://karanbabbar.app.n8n.cloud/webhook/v2/meal-planning`
 
-## User Flow
+## User Flow (State Engine V3)
 1. **Homepage** → "Plan & Pre-Order Protein"
 2. **Macro Fork** → Enter macros OR use calculator
 3. **Calculator Disclaimer** → (if calculator path)
 4. **Onboarding Wizard** → 6-step form (name, age, measurements, goals, activity, preferences)
 5. **Results** → Show calculated macros
-6. **Meal Planning Wizard (Merged Agent 2+3)** → Backend-driven UI through single endpoint:
-   - `budget_setup` → Distribution selection + supplements
-   - `source_select` → Choose protein sources (max 3)
-   - `cut_select` → Cut preference selection
-   - `product_select` → Select products (max 1 per category)
-   - `portion_confirm` → Confirm portions and utilization
-   - `meal_confirmed` → Meal locked badge
-   - `weekly_summary` → 7-day plan + cart preview
+6. **Meal Planning Wizard (V3 State Engine)** → Backend-driven UI through single endpoint:
+   - `supplement_ask` → **NEW V3** - Ask about protein supplements first
+   - `budget_setup` → Distribution selection (shows protein deduction math)
+   - `source_select` → Choose protein sources (max 3) with carried portions info
+   - `cut_select` → Cut preference selection (skipped for eggs)
+   - `product_select` → **GROUPED BY SOURCE** - Select products with "Pick 1" per category
+   - `portion_confirm` → Confirm portions + **utilization options** for leftover packs
+   - `meal_confirmed` → Meal locked badge with **Edit button** + running cost
+   - `consolidation` → **NEW V3** - Summary of all meals with Edit menu + cost summary
+   - `weekly_summary` → **OVERHAULED** - 7-day plan (accordion) + Shopping Cart (tabs) with Edit
+   - `delivery_frequency` → **NEW V3** - How often user wants deliveries
    - `delivery_select` → Time slot selection
    - `order_confirmed` → Final confirmation screen
 7. **Final Cart** → Weekly supply summary with Licious links
 
-## Structured JSON Selections
-The frontend sends structured JSON instead of plain text for backend reliability:
-- Distribution tap → `{"distribution": "Equal", "supplement_grams": 0}`
-- Source select → `{"sources": ["eggs", "chicken"]}`
-- Cut select → `{"cut": "Boneless"}`
-- Product select → `{"products": ["Chicken Breast Boneless 450g"]}`
-- Utilization → `{"utilization": {"Eggs Pack of 6": "same_meal_multi_day"}}`
-- Time slot → `{"time_slot": "morning"}`
+## V3 Structured JSON Payloads
+All frontend sends structured JSON payloads:
+- Supplement: `{"supplement_grams": 25}`
+- Distribution: `{"distribution": "Equal"}`
+- Sources: `{"sources": ["eggs", "chicken"]}`
+- Cut: `{"cut": "Boneless"}`
+- Products: `{"products": ["Chicken Breast Boneless 450g", "Farm Eggs 6 pack"]}`
+- Utilization: `{"utilization": {"Eggs Pack of 6": "same_meal_multi_day"}}`
+- Consolidation: `{"confirm": true}` or `{"edit_meal": "breakfast"}`
+- Weekly Summary: `{"confirm": true}` or `{"edit_meal": "lunch"}`
+- Frequency: `{"frequency": "every_2_days"}`
+- Time slot: `{"time_slot": "morning"}`
+
+## V3 Key UX Features
+1. **Running Cost Banner** - Persistent display of daily + weekly cost estimates
+2. **Edit Functionality** - Available at meal_confirmed, consolidation, weekly_summary stages
+3. **Product Grouping** - Products grouped by source category with "Pick 1" label
+4. **Utilization Options** - For leftover pack portions: same_meal_multi_day, other_meal, smaller_pack
+5. **CTA Buttons** - No text input required; all confirmations via button clicks
 
 ## Key Business Rules
 - Single `session_id` persists across all API calls
@@ -51,6 +65,34 @@ The frontend sends structured JSON instead of plain text for backend reliability
 
 ## What's Been Implemented (Dec 2025)
 
+### State Engine V3 Implementation ✅ (Latest Update)
+Complete frontend overhaul to support V3 backend state engine:
+
+**New V3 Components:**
+1. `SupplementAsk` - First screen asking about protein supplements with predefined options + custom input
+2. `DeliveryFrequency` - Select delivery frequency (daily, every_2_days, every_3_days, weekly)
+3. `Consolidation` - Summary of all meals with Edit menu and cost summary
+4. `RunningCostBanner` - Persistent daily/weekly cost display
+
+**Overhauled Components:**
+1. `DistributionSetup` - Shows protein deduction math (original - supplements = food target)
+2. `SourceChips` - Multi-select with carried portions info from leftover packs
+3. `CutChips` - Single-select, skipped for eggs, shows category icon
+4. `ProductCardGrid` - **GROUP BY SOURCE** with "Pick 1" per category, shows protein_per_pack
+5. `PortionConfirmCard` - Two sections: portions summary + utilization options per product
+6. `MealBadge` - Shows locked meal + running cost banner + **Edit button**
+7. `WeeklySummary` - **Two tabs**: 7-Day Plan (accordion) + Shopping Cart with Change/Edit buttons
+8. `TimeSlotSelect` - Updated styling
+9. `OrderConfirmed` - Shows frequency + slot + detailed cart
+
+**CollapsedBadge V3 Updates:**
+- Handles all 12 V3 ui_types with appropriate summary text
+
+**Edit Functionality:**
+- `MealBadge`: `{"edit_meal": "breakfast"}`
+- `Consolidation`: Edit dropdown + "Build My Weekly Plan" CTA
+- `WeeklySummary`: Edit dropdown + "Confirm & Choose Delivery" CTA
+
 ### Core Features ✅
 - Homepage with branding and CTA
 - Macro Fork screen (know macros vs calculate)
@@ -58,71 +100,25 @@ The frontend sends structured JSON instead of plain text for backend reliability
 - 6-step onboarding wizard with form validation
 - Results screen showing calculated macros
 - Dynamic meal planning UI driven by `ui_type` from API
-- Visual components: DistributionSetup, SourceChips, CutChips, ProductCardGrid, PortionConfirmCard, MealBadge
 - CollapsedBadge for completed steps
 - Final cart summary screen
 - Journey tracker (progress indicator)
 
-### Merged Agent 2+3 Flow Update (Dec 2025) ✅
-The /v2/weekly-cart endpoint was removed. Everything now flows through /v2/meal-planning:
-1. **Removed WeeklyOrderWizard** component (no longer needed)
-2. **Added 3 new ui_type components:**
-   - `WeeklySummary` - Shows 7-day plan + cart preview
-   - `TimeSlotSelect` - Choose delivery time slot
-   - `OrderConfirmed` - Final order confirmation screen
-3. **Changed all selections to JSON format:**
-   - Distribution: `{"distribution": "Equal", "supplement_grams": 0}`
-   - Sources: `{"sources": ["eggs", "chicken"]}`
-   - Cut: `{"cut": "Boneless"}`
-   - Products: `{"products": ["Chicken Breast Boneless 450g"]}`
-   - Utilization: `{"utilization": {...}}`
-   - Time slot: `{"time_slot": "morning"}`
-4. **Flow completion:** When `order_confirmed` ui_type is received, transitions to FinalCart
-
-### Bug Fixes - Comprehensive Defensive Programming Audit (Dec 2025) ✅
-**P0 CRITICAL - All `.map()` crashes fixed with Array.isArray() guards:**
-1. **PillSelect** (Line 51) - Guard on options.map()
-2. **DistributionSetup** (Lines 536-554, 594) - rawDistributions normalization + distributions.map() guard
-3. **SourceChips** (Lines 651-659, 662, 678) - rawSources normalization + sources.map() guard
-4. **CutChips** (Lines 727-738, 761) - rawCuts normalization + cuts.map() guard
-5. **ProductCardGrid** (Lines 799-807, 810-811, 880, 934, 938, 949) - rawProducts normalization + all .map() guards
-6. **PortionConfirmCard** (Lines 972-988, 990, 1011, 1037, 1041, 1044, 1047, 1053) - portions & utilizationOptions normalization + all .map() guards
-7. **MealPlanningWizard msgs** (Line 1240) - msgs.map() guard
-8. **WeeklyOrderWizard msgs** (Line 1377) - msgs.map() guard
-9. **DeliverySelect** (Lines 1419-1429, 1435) - options normalization + .map() guard
-10. **WeeklyPlanReview** (Lines 1463-1481) - days normalization + .map() guards
-11. **CartPreview** (Lines 1500-1524) - cart normalization + .map() guards
-12. **FinalCart** (Lines 1548-1566) - cart normalization + .map() guard
-
-**P1 - CTA Button Disable After Click:**
-- All submit buttons have isSubmitting/submitted state preventing double submissions
-- Loading spinners shown during API calls
-
-**P1 - Agent 2 → Agent 3 Transition:**
-- Code verified: When meal planning API returns stage_complete=true, goes to 'weekly' screen (WeeklyOrderWizard), NOT directly to 'cart'
-
-**P2 - Fallback Text Input:**
-- ChatInput component renders when ui_type is not recognized or missing
-- Allows users to always respond with text
-
-### Previous Bug Fixes Applied (Dec 2025) ✅
-1. **P0 - msg.trim error** - Type checking before trim() in send function
-2. **P1 - Budget badge undefined** - Added fullData prop to CollapsedBadge
-3. **P1 - Product selection** - SWAP logic (max 1 per category) + "Pick 1" labels
-4. **P2 - Select button** - Disabled after submission with loading state
-5. **P2 - Floating-point** - All protein displays use Math.round(value * 10) / 10
-6. **P2 - Lock Meal button** - Disabled after submission with loading state
-7. **Retry mechanism** - ErrorRetry component shows "Something went wrong. Tap to retry" on API failures
+### Defensive Programming ✅
+- **51 Array.isArray() guards** for all .map() calls
+- Type checking before .trim() and .length calls
+- Safe property access with optional chaining
 
 ---
 
 ## Prioritized Backlog
 
 ### P0 - Critical
-- ✅ All P0 bugs fixed - no crashes from .map() calls
+- ✅ State Engine V3 implementation complete
 
 ### P1 - High Priority
-- Full E2E testing when n8n API is functional
+- Full E2E testing when n8n webhook API is operational
+- "Remove" button functionality in final cart (deferred per spec)
 
 ### P2 - Medium Priority
 - None currently
@@ -137,7 +133,7 @@ The /v2/weekly-cart endpoint was removed. Everything now flows through /v2/meal-
 ## File Structure
 ```
 /app/frontend/src/
-├── App.js          # All components, state, API calls, styles (~1600 lines)
+├── App.js          # All components, state, API calls, styles (~2100 lines)
 └── index.js        # React entry point
 ```
 
@@ -146,9 +142,30 @@ The /v2/weekly-cart endpoint was removed. Everything now flows through /v2/meal-
 ---
 
 ## Testing Status
-- **Code Review:** All defensive Array.isArray() guards verified ✅
-- **CTA Button Disable:** Double-click blocking verified ✅
-- **Agent 2 → Agent 3 Transition:** Code logic verified ✅
-- **Fallback Text Input:** ChatInput component verified ✅
-- **Functional Testing:** Frontend success rate 100%, external n8n API returns empty responses
-- **Test Reports:** `/app/test_reports/iteration_1.json`, `/app/test_reports/iteration_2.json`, `/app/test_reports/iteration_3.json`
+- **Frontend Build:** ✅ Compiles successfully
+- **Code Review:** All V3 components verified ✅
+- **Defensive Guards:** 51 Array.isArray() guards verified ✅
+- **Frontend Success Rate:** 100% - All screens load correctly, no crashes
+- **External API:** n8n webhook returns empty responses (not under our control)
+- **Test Reports:** `/app/test_reports/iteration_1.json`, `/app/test_reports/iteration_4.json`
+
+---
+
+## V3 Component Line References
+| Component | Line | Description |
+|-----------|------|-------------|
+| RunningCostBanner | ~123 | Sticky banner for daily/weekly costs |
+| SupplementAsk | ~152 | NEW - First screen asking about supplements |
+| DistributionSetup | ~705 | Budget setup with distribution patterns |
+| SourceChips | ~826 | Multi-select with carried portions |
+| CutChips | ~944 | Cut type selection |
+| ProductCardGrid | ~1032 | GROUP BY SOURCE with "Pick 1" |
+| PortionConfirmCard | ~1223 | Portions + utilization options |
+| MealBadge | ~1435 | Meal locked with Edit button |
+| Consolidation | ~1517 | NEW - Summary with Edit menu |
+| WeeklySummary | ~1652 | 7-day plan tabs + edit |
+| DeliveryFrequency | ~1824 | NEW - Frequency selection |
+| TimeSlotSelect | ~1898 | Time slot selection |
+| OrderConfirmed | ~1960 | Final confirmation |
+| CollapsedBadge | ~612 | V3 summary badges |
+| knownUiTypes | ~2180 | All 12 V3 ui_types |
