@@ -702,11 +702,12 @@ const CollapsedBadge = ({ type, data, fullData, msgs = [], msgIndex = 0 }) => {
 };
 
 // V3: Budget Setup Component - shows protein deduction math + distribution selection
+// BUG 1 FIX: Use protein_target (already deducted) and display values directly from backend
 const DistributionSetup = ({ data, onSelect }) => {
   const [sel, setSel] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // V3: New fields from backend
+  // V3: New fields from backend - protein_target is ALREADY deducted
   const proteinTarget = data?.protein_target || 150;
   const supplementG = data?.supplement_g || 0;
   const originalProtein = data?.original_protein || proteinTarget + supplementG;
@@ -731,19 +732,20 @@ const DistributionSetup = ({ data, onSelect }) => {
   
   if (!Array.isArray(distributions)) distributions = [];
   
-  // Get distribution values - V3 format uses nested "values" object
+  // BUG 1 FIX: Get distribution values - ALWAYS use backend values, don't recalculate
   const getDistributionValues = (d) => {
     // V3 format: { label, icon, values: { breakfast, lunch, dinner } }
+    // The backend sends values already calculated based on protein_target (supplement-deducted)
     if (d?.values?.breakfast !== undefined) {
       return [d.values.breakfast || 0, d.values.lunch || 0, d.values.dinner || 0];
     }
-    // Legacy format
-    if (d?.breakfast > 0 || d?.lunch > 0 || d?.dinner > 0) {
+    // Alternative format with direct properties
+    if (d?.breakfast !== undefined || d?.lunch !== undefined || d?.dinner !== undefined) {
       return [d.breakfast || 0, d.lunch || 0, d.dinner || 0];
     }
-    // Fallback calculation
-    const calculated = calculateDistribution(d?.label, proteinTarget);
-    return [calculated.breakfast, calculated.lunch, calculated.dinner];
+    // ONLY fallback if backend sends no values at all (shouldn't happen in V3)
+    const perMeal = Math.round(proteinTarget / mealsPerDay);
+    return [perMeal, perMeal, proteinTarget - (perMeal * 2)];
   };
   
   const handleSelect = (d) => {
@@ -756,13 +758,17 @@ const DistributionSetup = ({ data, onSelect }) => {
   
   return (
     <div className="si" style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
-      {/* V3: Show protein deduction math */}
+      {/* V3: Show protein deduction math - BUG 1 FIX: Always show the deduction */}
       <div style={{ textAlign: "center", marginBottom: 16, padding: 14, background: T.g[50], borderRadius: 12 }}>
         <p style={{ fontSize: 11, fontWeight: 700, color: T.g[500], textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Protein from food</p>
         <p style={{ fontSize: 28, fontWeight: 800, color: T.brand, fontFamily: mono }}>{proteinTarget}g</p>
-        {supplementG > 0 && (
+        {supplementG > 0 ? (
           <p style={{ fontSize: 11, color: T.g[500], marginTop: 6 }}>
             {originalProtein}g daily − {supplementG}g supplements = <strong style={{ color: T.brand }}>{proteinTarget}g</strong> from food
+          </p>
+        ) : (
+          <p style={{ fontSize: 11, color: T.g[500], marginTop: 6 }}>
+            Full target from food (no supplements)
           </p>
         )}
       </div>
@@ -790,7 +796,7 @@ const DistributionSetup = ({ data, onSelect }) => {
               <span style={{ fontSize: 24, flexShrink: 0 }}>{d?.icon || "⚖️"}</span>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: isSelected ? T.brand : T.dark, marginBottom: 8 }}>{d?.label || "Option"}</div>
-                {/* V3: Show prominent numbers for each meal */}
+                {/* BUG 1 FIX: Show prominent numbers from backend values */}
                 <div style={{ display: "flex", gap: 6 }}>
                   {meals.map((m, i) => (
                     <div key={m} style={{ 
