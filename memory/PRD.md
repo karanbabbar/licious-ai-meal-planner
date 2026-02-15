@@ -28,7 +28,7 @@ Build a React mobile-first web app called "Protein Planner v2" - a guided wizard
    - `portion_confirm` → Confirm portions + **utilization options** + **Change Products button**
    - `meal_confirmed` → Meal locked badge + **Edit button**
    - `consolidation` → Summary + **Edit menu** + cost summary
-   - `weekly_summary` → **7-day accordion** + **Cart with Change buttons** + **CartEditor overlay**
+   - `weekly_summary` → **Horizontal scrollable calendar** + Cart + CartEditor
    - `delivery_frequency` → Delivery frequency selection
    - `delivery_select` → Time slot selection
    - `order_confirmed` → Final confirmation
@@ -37,7 +37,16 @@ Build a React mobile-first web app called "Protein Planner v2" - a guided wizard
 
 ## What's Been Implemented (Dec 2025)
 
-### Bug Fixes R1 - All 8 Fixed ✅ (Latest)
+### Round 2 Quick Fixes - All 4 Addressed ✅ (Latest)
+
+| Issue | Priority | Status | Notes |
+|-------|----------|--------|-------|
+| 1 | P0 | ALREADY DONE | "← Change Products" button on PortionConfirmCard (BUG 5 fix) |
+| 2 | P0 | VERIFIED | Edit buttons send `{edit_meal: 'meal_name'}` correctly |
+| 3 | P1 | ALREADY DONE | CartEditor allows product swapping (BUG 7 fix) |
+| 4 | P1 | NEW ✅ | WeeklySummary redesigned to horizontal scrollable calendar |
+
+### Bug Fixes R1 - All 8 Fixed ✅
 
 | Bug | Priority | Component | Fix |
 |-----|----------|-----------|-----|
@@ -73,14 +82,14 @@ Build a React mobile-first web app called "Protein Planner v2" - a guided wizard
 ## Prioritized Backlog
 
 ### P0 - Critical
-- ✅ All P0 bugs fixed
+- ✅ All P0 issues resolved
 
 ### P1 - High Priority
-- ✅ All P1 bugs fixed
+- ✅ All P1 issues resolved
 - Full E2E testing when n8n webhook API is operational
 
 ### P2 - Medium Priority
-- ✅ CartEditor implemented (local only v1)
+- ✅ CartEditor implemented with product swapping
 - "Remove" button in final cart (deferred)
 
 ---
@@ -88,7 +97,7 @@ Build a React mobile-first web app called "Protein Planner v2" - a guided wizard
 ## File Structure
 ```
 /app/frontend/src/
-├── App.js          # All components (~2600 lines)
+├── App.js          # All components (~2700 lines)
 └── index.js        # React entry point
 ```
 
@@ -96,21 +105,22 @@ Build a React mobile-first web app called "Protein Planner v2" - a guided wizard
 
 ## Testing Status
 - **Frontend Build:** ✅ Compiles successfully
-- **Bug Fixes Verified:** All 8 via code review ✅
+- **Round 2 Fixes Verified:** All 4 via code review ✅
 - **External API:** n8n webhook returns empty responses (not our bug)
-- **Test Reports:** `/app/test_reports/iteration_5.json`
+- **Test Reports:** `/app/test_reports/iteration_6.json`
 
 ---
 
 ## Key Code Locations
-| Component | Line | Notes |
-|-----------|------|-------|
-| CollapsedBadge | ~612 | BUG 8 fix - actual product count |
-| DistributionSetup | ~710 | BUG 1 fix - backend values |
-| ProductCardGrid | ~850 | BUG 2 fix - group by source |
-| PortionConfirmCard | ~1260 | BUG 4,5 fix - utilization + change products |
-| MealBadge | ~1480 | BUG 3 fix - edit button |
-| Consolidation | ~1550 | BUG 3 fix - edit menu |
-| WeeklySummary | ~1700 | BUG 6 fix - nested products |
-| CartEditor | ~1900 | BUG 7 fix - overlay |
-| MealPlanningWizard | ~2340 | productsCatalog state |
+
+| Component | Line Range | Notes |
+|-----------|------------|-------|
+| CollapsedBadge | ~612-723 | BUG 8 fix - actual product count |
+| DistributionSetup | ~727-849 | BUG 1 fix - backend values |
+| ProductCardGrid | ~1060-1276 | BUG 2 fix - group by source |
+| PortionConfirmCard | ~1278-1513 | BUG 4,5 fix - utilization + change products |
+| MealBadge | ~1516-1595 | BUG 3 fix - edit button |
+| Consolidation | ~1597-1730 | BUG 3 fix - edit menu |
+| WeeklySummary | ~1733-1939 | **ISSUE 4 - Horizontal calendar** |
+| CartEditor | ~1941-2052 | BUG 7 fix - overlay with swapping |
+| MealPlanningWizard | ~2337+ | productsCatalog state |
