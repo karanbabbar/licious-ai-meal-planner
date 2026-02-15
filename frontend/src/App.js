@@ -2176,8 +2176,21 @@ const MealPlanningWizard = ({ sessionId, onComplete, onRestart }) => {
     }
   };
 
-  // FIX 1: Known ui_types that have visual components (merged Agent 2 + Agent 3)
-  const knownUiTypes = ['budget_setup', 'source_select', 'cut_select', 'product_select', 'portion_confirm', 'meal_confirmed', 'weekly_summary', 'delivery_select', 'order_confirmed'];
+  // V3: Known ui_types that have visual components
+  const knownUiTypes = [
+    'supplement_ask',      // V3: NEW
+    'budget_setup', 
+    'source_select', 
+    'cut_select', 
+    'product_select', 
+    'portion_confirm', 
+    'meal_confirmed', 
+    'consolidation',       // V3: NEW
+    'weekly_summary', 
+    'delivery_frequency',  // V3: NEW
+    'delivery_select', 
+    'order_confirmed'
+  ];
 
   const renderUI = (msg, isLatest) => {
     const uiType = msg.data?.ui_type;
@@ -2186,21 +2199,27 @@ const MealPlanningWizard = ({ sessionId, onComplete, onRestart }) => {
     // If we have a recognized ui_type with data, render the visual component
     if (uiType && uiData && knownUiTypes.includes(uiType)) {
       switch (uiType) {
+        // V3: NEW - First screen
+        case 'supplement_ask': return <SupplementAsk data={uiData} onSelect={send} />;
         case 'budget_setup': return <DistributionSetup data={uiData} onSelect={send} />;
         case 'source_select': return <SourceChips data={uiData} onSelect={send} />;
         case 'cut_select': return <CutChips data={uiData} onSelect={send} />;
         case 'product_select': return <ProductCardGrid data={uiData} onSelect={send} />;
         case 'portion_confirm': return <PortionConfirmCard data={uiData} onConfirm={send} />;
         case 'meal_confirmed': return <MealBadge data={uiData} onEdit={send} />;
-        // New merged Agent 3 ui_types
-        case 'weekly_summary': return <WeeklySummary data={uiData} onContinue={send} />;
+        // V3: NEW - After all meals confirmed
+        case 'consolidation': return <Consolidation data={uiData} onAction={send} />;
+        // V3: Updated with edit functionality
+        case 'weekly_summary': return <WeeklySummary data={uiData} onAction={send} />;
+        // V3: NEW - Before delivery slot
+        case 'delivery_frequency': return <DeliveryFrequency data={uiData} onSelect={send} />;
         case 'delivery_select': return <TimeSlotSelect data={uiData} onSelect={send} />;
         case 'order_confirmed': return <OrderConfirmed data={uiData} />;
         default: return null;
       }
     }
     
-    // FIX 1: FALLBACK - Show text + input for ANY unrecognized response (only for latest message)
+    // FALLBACK - Show text + input for ANY unrecognized response (only for latest message)
     if (isLatest) {
       const text = msg.data?.message || msg.text || '';
       return (
