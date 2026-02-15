@@ -1489,9 +1489,153 @@ const MealBadge = ({ data, onEdit }) => {
   );
 };
 
-// NEW: Weekly Summary component (shows 7-day plan + cart preview)
-const WeeklySummary = ({ data, onContinue }) => {
+// V3: NEW - Consolidation Component (after all meals confirmed)
+const Consolidation = ({ data, onAction }) => {
+  const [showEditMenu, setShowEditMenu] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const suggestions = data?.suggestions || [];
+  const totalDailyPrice = data?.total_daily_price || 0;
+  const totalWeeklyPrice = data?.total_weekly_price || 0;
+  
+  // DEFENSIVE: Ensure meals_summary is always an array
+  let mealsSummary = data?.meals_summary || [];
+  if (!Array.isArray(mealsSummary)) {
+    mealsSummary = typeof mealsSummary === 'object' ? Object.values(mealsSummary) : [];
+  }
+  
+  const mealIcons = { Breakfast: "🌅", Lunch: "☀️", Dinner: "🌙" };
+  
+  const handleConfirm = () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    onAction({ confirm: true });
+  };
+  
+  const handleEditMeal = (mealLabel) => {
+    if (isSubmitting) return;
+    setShowEditMenu(false);
+    onAction({ edit_meal: mealLabel.toLowerCase() });
+  };
+  
+  return (
+    <div className="si" style={{ marginTop: 8 }}>
+      {/* Header */}
+      <div style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+          <span style={{ fontSize: 28 }}>📋</span>
+          <div>
+            <p style={{ fontSize: 16, fontWeight: 800, color: T.dark }}>Your Meal Plan Summary</p>
+            <p style={{ fontSize: 12, color: T.g[500] }}>Review before building weekly plan</p>
+          </div>
+        </div>
+        
+        {/* Meals Summary */}
+        {(Array.isArray(mealsSummary) ? mealsSummary : []).map((meal, idx) => {
+          const label = meal?.label || "Meal";
+          const targetG = meal?.target_g || 0;
+          const actualG = meal?.actual_g || 0;
+          const products = meal?.products || [];
+          const isOnTarget = actualG >= targetG * 0.95;
+          
+          return (
+            <div key={idx} style={{ padding: "14px 0", borderBottom: idx < mealsSummary.length - 1 ? "1px solid " + T.g[100] : "none" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 18 }}>{mealIcons[label] || "🍽"}</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: T.dark }}>{label}</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: isOnTarget ? T.green : T.amber }}>
+                    {Math.round(actualG * 10) / 10}g / {targetG}g {isOnTarget ? "✓" : ""}
+                  </span>
+                  <button 
+                    onClick={() => handleEditMeal(label)}
+                    style={{ 
+                      fontSize: 11, fontWeight: 600, color: T.brand, 
+                      background: T.brandLt, border: "none", 
+                      borderRadius: 6, padding: "4px 10px", cursor: "pointer"
+                    }}
+                  >
+                    Edit
+                  </button>
+                </div>
+              </div>
+              <div style={{ marginLeft: 26 }}>
+                {(Array.isArray(products) ? products : []).map((p, i) => (
+                  <p key={i} style={{ fontSize: 12, color: T.g[600], marginBottom: 2 }}>• {p}</p>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      
+      {/* Cost Summary */}
+      <div style={{ padding: 16, background: T.dark, borderRadius: 14, marginBottom: 12, display: "flex", justifyContent: "space-around" }}>
+        <div style={{ textAlign: "center" }}>
+          <p style={{ fontSize: 10, color: T.g[400], textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Daily Cost</p>
+          <p style={{ fontSize: 22, fontWeight: 800, color: T.white, fontFamily: mono }}>₹{totalDailyPrice}</p>
+        </div>
+        <div style={{ width: 1, background: T.g[600] }} />
+        <div style={{ textAlign: "center" }}>
+          <p style={{ fontSize: 10, color: T.g[400], textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Weekly Cost</p>
+          <p style={{ fontSize: 22, fontWeight: 800, color: T.green, fontFamily: mono }}>₹{totalWeeklyPrice}</p>
+        </div>
+      </div>
+      
+      {/* Suggestions */}
+      {(Array.isArray(suggestions) ? suggestions : []).length > 0 && (
+        <div style={{ padding: 14, background: T.blueLt, borderRadius: 12, border: "1px solid " + T.blue + "30", marginBottom: 12 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: T.blue, marginBottom: 8 }}>💡 Savings Opportunity</p>
+          {suggestions.map((s, i) => (
+            <p key={i} style={{ fontSize: 12, color: T.g[600], marginBottom: 4 }}>{s}</p>
+          ))}
+        </div>
+      )}
+      
+      {(Array.isArray(suggestions) ? suggestions : []).length === 0 && (
+        <div style={{ padding: 12, background: T.greenLt, borderRadius: 10, marginBottom: 12, textAlign: "center" }}>
+          <p style={{ fontSize: 12, color: T.green, fontWeight: 600 }}>✓ Your selection is already optimized!</p>
+        </div>
+      )}
+      
+      {/* Action Buttons - V3: Clear CTA buttons, no text input */}
+      <div style={{ display: "flex", gap: 10 }}>
+        <Btn onClick={handleConfirm} full disabled={isSubmitting} loading={isSubmitting} style={{ flex: 2 }}>
+          {isSubmitting ? "Building..." : "✅ Build My Weekly Plan"}
+        </Btn>
+        <div style={{ position: "relative", flex: 1 }}>
+          <Btn onClick={() => setShowEditMenu(!showEditMenu)} v="secondary" full disabled={isSubmitting}>
+            ✏️ Modify
+          </Btn>
+          {showEditMenu && (
+            <div style={{ position: "absolute", bottom: "100%", left: 0, right: 0, marginBottom: 6, background: T.white, borderRadius: 10, border: "1px solid " + T.g[200], boxShadow: T.sh.m, overflow: "hidden", zIndex: 10 }}>
+              {["Breakfast", "Lunch", "Dinner"].map(m => (
+                <button key={m} onClick={() => handleEditMeal(m)} style={{ display: "block", width: "100%", padding: "10px 14px", border: "none", borderBottom: m !== "Dinner" ? "1px solid " + T.g[100] : "none", background: "transparent", fontSize: 13, fontWeight: 500, color: T.dark, cursor: "pointer", textAlign: "left" }}>
+                  Edit {m}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// V3: Weekly Summary Component - Detailed 7-day view with accordion + editable cart
+const WeeklySummary = ({ data, onAction }) => {
+  const [activeTab, setActiveTab] = useState("plan");
+  const [expandedDay, setExpandedDay] = useState(1);
+  const [showEditMenu, setShowEditMenu] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // V3: Handle ui_data fields
+  const dailyProtein = data?.daily_protein || 104;
+  const dailyCost = data?.daily_cost || 0;
+  const totalCartPrice = data?.total_cart_price || 0;
+  const distribution = data?.distribution || {};
   
   // DEFENSIVE: Ensure arrays
   let weeklyPlan = data?.weekly_plan || [];
@@ -1504,56 +1648,224 @@ const WeeklySummary = ({ data, onContinue }) => {
     cart = typeof cart === 'object' ? Object.values(cart) : [];
   }
   
-  const total = data?.total_cart_price || 0;
+  const mealIcons = { Breakfast: "🌅", Lunch: "☀️", Dinner: "🌙" };
   
-  const handleContinue = () => {
+  const handleConfirm = () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
-    onContinue({ action: "confirm_weekly_summary" });
+    onAction({ confirm: true });
+  };
+  
+  const handleEditMeal = (mealLabel) => {
+    if (isSubmitting) return;
+    setShowEditMenu(false);
+    onAction({ edit_meal: mealLabel.toLowerCase() });
   };
   
   return (
     <div className="si" style={{ marginTop: 8 }}>
-      {/* Weekly Plan */}
-      <div style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginBottom: 12 }}>
-        <p style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 18 }}>📅</span> Your 7-Day Plan
-        </p>
-        {(Array.isArray(weeklyPlan) ? weeklyPlan : []).map((day, i) => (
-          <div key={i} style={{ padding: "10px 0", borderBottom: i < weeklyPlan.length - 1 ? "1px solid " + T.g[100] : "none" }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: T.dark, marginBottom: 4 }}>{day?.day || day?.label || `Day ${i + 1}`}</p>
-            <p style={{ fontSize: 11, color: T.g[500] }}>
-              {(Array.isArray(day?.meals) ? day.meals : []).map(m => m?.meal_label || m).join(' • ') || day?.summary || 'Planned'}
-            </p>
-          </div>
-        ))}
+      {/* Tab Switcher */}
+      <div style={{ display: "flex", gap: 4, padding: 4, background: T.g[100], borderRadius: 12, marginBottom: 12 }}>
+        <button onClick={() => setActiveTab("plan")} style={{ flex: 1, padding: "10px 16px", borderRadius: 10, border: "none", background: activeTab === "plan" ? T.white : "transparent", color: activeTab === "plan" ? T.dark : T.g[500], fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: activeTab === "plan" ? T.sh.s : "none" }}>
+          📅 7-Day Plan
+        </button>
+        <button onClick={() => setActiveTab("cart")} style={{ flex: 1, padding: "10px 16px", borderRadius: 10, border: "none", background: activeTab === "cart" ? T.white : "transparent", color: activeTab === "cart" ? T.dark : T.g[500], fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: activeTab === "cart" ? T.sh.s : "none" }}>
+          🛒 Cart ({cart.length})
+        </button>
       </div>
       
-      {/* Cart Preview */}
-      <div style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <p style={{ fontSize: 13, fontWeight: 700, color: T.dark, display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 18 }}>🛒</span> Cart Preview
-          </p>
-          <span style={{ fontSize: 16, fontWeight: 800, color: T.brand, fontFamily: mono }}>₹{total.toLocaleString()}</span>
+      {/* TAB 1: 7-Day Plan */}
+      {activeTab === "plan" && (
+        <div style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m }}>
+          <div style={{ marginBottom: 14 }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: T.dark }}>Daily protein: {dailyProtein}g from food</p>
+            {data?.supplement_g > 0 && (
+              <p style={{ fontSize: 11, color: T.g[500] }}>+ {data.supplement_g}g supplements</p>
+            )}
+          </div>
+          
+          {/* Accordion for each day */}
+          {(Array.isArray(weeklyPlan) ? weeklyPlan : []).map((day, i) => {
+            const dayNum = day?.day || i + 1;
+            const isExpanded = expandedDay === dayNum;
+            const meals = day?.meals || [];
+            
+            return (
+              <div key={i} style={{ borderBottom: i < weeklyPlan.length - 1 ? "1px solid " + T.g[100] : "none" }}>
+                <button 
+                  onClick={() => setExpandedDay(isExpanded ? null : dayNum)}
+                  style={{ width: "100%", padding: "12px 0", display: "flex", justifyContent: "space-between", alignItems: "center", background: "transparent", border: "none", cursor: "pointer" }}
+                >
+                  <span style={{ fontSize: 14, fontWeight: 700, color: T.dark }}>Day {dayNum}</span>
+                  <span style={{ fontSize: 12, color: T.g[400] }}>{isExpanded ? "▲" : "▼"}</span>
+                </button>
+                
+                {isExpanded && (
+                  <div style={{ paddingBottom: 12 }}>
+                    {(Array.isArray(meals) ? meals : []).map((meal, mi) => {
+                      const mealLabel = meal?.meal_label || "Meal";
+                      const mealProducts = meal?.products || [];
+                      const mealProtein = meal?.total_protein_g || 0;
+                      
+                      return (
+                        <div key={mi} style={{ padding: "8px 12px", marginBottom: 6, background: T.g[50], borderRadius: 10 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: T.dark }}>
+                              {mealIcons[mealLabel] || "🍽"} {mealLabel}
+                            </span>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: T.green }}>{Math.round(mealProtein * 10) / 10}g</span>
+                          </div>
+                          {(Array.isArray(mealProducts) ? mealProducts : []).map((p, pi) => (
+                            <p key={pi} style={{ fontSize: 11, color: T.g[600], marginLeft: 22, marginBottom: 2 }}>
+                              • {p?.product_name || p} {p?.quantity && `(${p.quantity})`}
+                            </p>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
-        {(Array.isArray(cart) ? cart : []).map((item, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: i < cart.length - 1 ? "1px solid " + T.g[100] : "none" }}>
-            <div style={{ width: 40, height: 40, borderRadius: 8, background: T.g[100], overflow: "hidden", flexShrink: 0 }}>
-              {item?.image_url ? <img src={item.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🥩</div>}
-            </div>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 12, fontWeight: 600, color: T.dark }}>{item?.product_name || 'Product'}</p>
-              <p style={{ fontSize: 10, color: T.g[500] }}>{item?.pack_size_label || ''} × {item?.packs_needed || 1}</p>
-            </div>
-            <span style={{ fontSize: 13, fontWeight: 700, color: T.brand, fontFamily: mono }}>₹{item?.price || item?.total_price || 0}</span>
+      )}
+      
+      {/* TAB 2: Shopping Cart */}
+      {activeTab === "cart" && (
+        <div style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: T.dark }}>Weekly Shopping Cart</p>
+            <span style={{ fontSize: 18, fontWeight: 800, color: T.brand, fontFamily: mono }}>₹{totalCartPrice.toLocaleString()}</span>
           </div>
-        ))}
+          
+          {(Array.isArray(cart) ? cart : []).map((item, i) => (
+            <div key={i} style={{ display: "flex", gap: 12, padding: "12px 0", borderBottom: i < cart.length - 1 ? "1px solid " + T.g[100] : "none" }}>
+              <div style={{ width: 56, height: 56, borderRadius: 10, background: T.g[100], overflow: "hidden", flexShrink: 0 }}>
+                {item?.image_url ? (
+                  <img src={item.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => e.target.style.display = "none"} />
+                ) : (
+                  <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🥩</div>
+                )}
+              </div>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 2 }}>{item?.product_name || 'Product'}</p>
+                <p style={{ fontSize: 11, color: T.g[500], marginBottom: 4 }}>
+                  {item?.pack_size_label || ''} × {item?.packs_needed || 1} = <span style={{ color: T.brand, fontWeight: 700 }}>₹{item?.total_price || item?.price || 0}</span>
+                </p>
+                {/* V3: Change button for cart items */}
+                <button 
+                  onClick={() => handleEditMeal("breakfast")} // Simplified - backend handles routing
+                  style={{ fontSize: 10, fontWeight: 600, color: T.g[500], background: T.g[100], border: "none", borderRadius: 4, padding: "3px 8px", cursor: "pointer" }}
+                >
+                  Change
+                </button>
+              </div>
+            </div>
+          ))}
+          
+          {/* Cost summary */}
+          <div style={{ marginTop: 12, padding: "12px 0", borderTop: "1px solid " + T.g[100], display: "flex", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 12, color: T.g[500] }}>Daily cost: ~₹{dailyCost}/day</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: T.dark }}>Weekly: ₹{totalCartPrice.toLocaleString()}</span>
+          </div>
+        </div>
+      )}
+      
+      {/* Action Buttons */}
+      <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+        <Btn onClick={handleConfirm} full disabled={isSubmitting} loading={isSubmitting} style={{ flex: 2 }}>
+          {isSubmitting ? "Processing..." : "✅ Confirm & Choose Delivery"}
+        </Btn>
+        <div style={{ position: "relative", flex: 1 }}>
+          <Btn onClick={() => setShowEditMenu(!showEditMenu)} v="secondary" full disabled={isSubmitting}>
+            ✏️ Edit
+          </Btn>
+          {showEditMenu && (
+            <div style={{ position: "absolute", bottom: "100%", left: 0, right: 0, marginBottom: 6, background: T.white, borderRadius: 10, border: "1px solid " + T.g[200], boxShadow: T.sh.m, overflow: "hidden", zIndex: 10 }}>
+              {["Breakfast", "Lunch", "Dinner"].map(m => (
+                <button key={m} onClick={() => handleEditMeal(m)} style={{ display: "block", width: "100%", padding: "10px 14px", border: "none", borderBottom: m !== "Dinner" ? "1px solid " + T.g[100] : "none", background: "transparent", fontSize: 13, fontWeight: 500, color: T.dark, cursor: "pointer", textAlign: "left" }}>
+                  Edit {m}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// V3: NEW - Delivery Frequency Component
+const DeliveryFrequency = ({ data, onSelect }) => {
+  const [selected, setSelected] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // DEFENSIVE: Ensure frequencies is always an array
+  let frequencies = data?.frequencies || [];
+  if (!Array.isArray(frequencies)) {
+    frequencies = [
+      { label: "Daily (fresh every day)", value: "daily" },
+      { label: "Every 2 days", value: "every_2_days" },
+      { label: "Every 3 days", value: "every_3_days" },
+      { label: "Weekly (once a week)", value: "weekly" }
+    ];
+  }
+  
+  const handleSelect = (freq) => {
+    if (isSubmitting) return;
+    const freqValue = typeof freq === 'string' ? freq : (freq?.value || freq?.label);
+    setSelected(freqValue);
+    setIsSubmitting(true);
+    // V3: Send frequency selection
+    onSelect({ frequency: freqValue });
+  };
+  
+  const freqIcons = { daily: "📦", every_2_days: "📦📦", every_3_days: "📦📦📦", weekly: "🗓️" };
+  
+  return (
+    <div className="si" style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
+      <div style={{ textAlign: "center", marginBottom: 16 }}>
+        <span style={{ fontSize: 32 }}>🚚</span>
+        <p style={{ fontSize: 16, fontWeight: 800, color: T.dark, marginTop: 8 }}>How often would you like delivery?</p>
+        <p style={{ fontSize: 12, color: T.g[500], marginTop: 4 }}>Choose based on your storage preference</p>
       </div>
       
-      <Btn onClick={handleContinue} full disabled={isSubmitting} loading={isSubmitting} style={{ marginTop: 16 }}>
-        {isSubmitting ? "Processing..." : "Choose Delivery Slot →"}
-      </Btn>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {(Array.isArray(frequencies) ? frequencies : []).map((freq, idx) => {
+          const freqValue = typeof freq === 'string' ? freq : (freq?.value || `freq_${idx}`);
+          const freqLabel = typeof freq === 'string' ? freq : (freq?.label || `Option ${idx + 1}`);
+          const isSelected = selected === freqValue;
+          
+          return (
+            <button 
+              key={freqValue + idx} 
+              onClick={() => handleSelect(freq)}
+              disabled={isSubmitting}
+              style={{
+                display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", borderRadius: 14,
+                border: "2px solid " + (isSelected ? T.brand : T.g[200]), 
+                background: isSelected ? T.brandLt : T.white,
+                cursor: isSubmitting ? "not-allowed" : "pointer", 
+                textAlign: "left",
+                opacity: isSubmitting && !isSelected ? 0.5 : 1,
+                transition: "all .2s"
+              }}
+            >
+              <span style={{ fontSize: 20, flexShrink: 0 }}>{freqIcons[freqValue] || "📦"}</span>
+              <span style={{ flex: 1, fontSize: 14, fontWeight: isSelected ? 700 : 500, color: isSelected ? T.brand : T.dark }}>{freqLabel}</span>
+              {isSelected && (
+                <div style={{ width: 22, height: 22, borderRadius: "50%", background: T.brand, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {isSubmitting 
+                    ? <div style={{ width: 12, height: 12, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin .6s linear infinite" }} /> 
+                    : <span style={{ color: "#fff", fontSize: 11 }}>✓</span>
+                  }
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 };
