@@ -1788,7 +1788,7 @@ const WeeklySummary = ({ data, onAction, productsCatalog, onOpenCartEditor }) =>
         </button>
       </div>
       
-      {/* TAB 1: BUG 6 FIX - 7-Day Plan with proper nested product rendering */}
+      {/* TAB 1: ISSUE 4 FIX - Horizontal Scrollable Calendar View */}
       {activeTab === "plan" && (
         <div style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m }}>
           <div style={{ marginBottom: 14 }}>
@@ -1798,71 +1798,166 @@ const WeeklySummary = ({ data, onAction, productsCatalog, onOpenCartEditor }) =>
             )}
           </div>
           
-          {/* BUG 6 FIX: Accordion for each day with proper nested structure */}
-          {(Array.isArray(weeklyPlan) ? weeklyPlan : []).map((day, i) => {
-            const dayNum = day?.day || i + 1;
-            const isExpanded = expandedDay === dayNum;
-            const meals = day?.meals || [];
+          {/* ISSUE 4 FIX: Horizontal scrollable calendar */}
+          <div 
+            className="no-sb"
+            style={{ 
+              display: "flex", 
+              gap: 12, 
+              overflowX: "auto", 
+              paddingBottom: 8,
+              marginLeft: -16,
+              marginRight: -16,
+              paddingLeft: 16,
+              paddingRight: 16
+            }}
+          >
+            {(Array.isArray(weeklyPlan) ? weeklyPlan : []).map((day, i) => {
+              const dayNum = day?.day || i + 1;
+              const isSelected = expandedDay === dayNum;
+              const meals = day?.meals || [];
+              const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+              const dayName = dayNames[i % 7] || `Day ${dayNum}`;
+              
+              return (
+                <div 
+                  key={i}
+                  onClick={() => setExpandedDay(dayNum)}
+                  style={{ 
+                    minWidth: 140,
+                    flexShrink: 0,
+                    padding: 12, 
+                    background: isSelected ? T.brandLt : T.g[50], 
+                    borderRadius: 14, 
+                    border: "2px solid " + (isSelected ? T.brand : T.g[200]),
+                    cursor: "pointer",
+                    transition: "all .2s"
+                  }}
+                >
+                  {/* Day Header */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                    <div>
+                      <p style={{ fontSize: 10, fontWeight: 600, color: isSelected ? T.brand : T.g[500], textTransform: "uppercase" }}>{dayName}</p>
+                      <p style={{ fontSize: 16, fontWeight: 800, color: isSelected ? T.brand : T.dark }}>Day {dayNum}</p>
+                    </div>
+                    {isSelected && (
+                      <div style={{ width: 20, height: 20, borderRadius: "50%", background: T.brand, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ color: "#fff", fontSize: 10 }}>✓</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Meals Summary */}
+                  {(Array.isArray(meals) ? meals : []).map((meal, mi) => {
+                    const mealLabel = meal?.meal_label || meal?.label || "Meal";
+                    const mealProducts = meal?.products || [];
+                    const mealProtein = meal?.total_protein_g || 0;
+                    const firstProduct = mealProducts[0];
+                    const productName = typeof firstProduct === 'string' 
+                      ? firstProduct 
+                      : (firstProduct?.product_name || firstProduct?.name || '');
+                    
+                    return (
+                      <div key={mi} style={{ marginBottom: mi < meals.length - 1 ? 8 : 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 2 }}>
+                          <span style={{ fontSize: 12 }}>{mealIcons[mealLabel] || "🍽"}</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: T.dark }}>{mealLabel}</span>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: T.green, fontFamily: mono, marginLeft: "auto" }}>{Math.round(mealProtein * 10) / 10}g</span>
+                        </div>
+                        {productName && (
+                          <p style={{ fontSize: 10, color: T.g[500], whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {productName}{mealProducts.length > 1 ? ` +${mealProducts.length - 1}` : ''}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                  
+                  {/* Show "Same as Day 1" for empty meals */}
+                  {meals.length === 0 && dayNum > 1 && (
+                    <p style={{ fontSize: 10, color: T.g[400], fontStyle: "italic" }}>Same as Day 1</p>
+                  )}
+                </div>
+              );
+            })}
             
-            // BUG 6: For days 2-7, show "Same as Day 1" if collapsed
-            const isSameAsDay1 = dayNum > 1 && !isExpanded;
+            {/* Generate placeholder day cards if weeklyPlan is empty */}
+            {weeklyPlan.length === 0 && [1, 2, 3, 4, 5, 6, 7].map((dayNum) => {
+              const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+              return (
+                <div 
+                  key={dayNum}
+                  style={{ 
+                    minWidth: 140,
+                    flexShrink: 0,
+                    padding: 12, 
+                    background: T.g[50], 
+                    borderRadius: 14, 
+                    border: "2px solid " + T.g[200]
+                  }}
+                >
+                  <div style={{ marginBottom: 10 }}>
+                    <p style={{ fontSize: 10, fontWeight: 600, color: T.g[500], textTransform: "uppercase" }}>{dayNames[dayNum - 1]}</p>
+                    <p style={{ fontSize: 16, fontWeight: 800, color: T.dark }}>Day {dayNum}</p>
+                  </div>
+                  {["Breakfast", "Lunch", "Dinner"].map((m, mi) => (
+                    <div key={mi} style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: mi < 2 ? 6 : 0 }}>
+                      <span style={{ fontSize: 12 }}>{mealIcons[m]}</span>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: T.g[400] }}>{m}</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+          
+          {/* Selected Day Detail View */}
+          {expandedDay && (Array.isArray(weeklyPlan) ? weeklyPlan : []).length > 0 && (() => {
+            const selectedDay = weeklyPlan.find(d => (d?.day || 0) === expandedDay) || weeklyPlan[expandedDay - 1];
+            const meals = selectedDay?.meals || [];
+            
+            if (!selectedDay || meals.length === 0) return null;
             
             return (
-              <div key={i} style={{ borderBottom: i < weeklyPlan.length - 1 ? "1px solid " + T.g[100] : "none" }}>
-                <button 
-                  onClick={() => setExpandedDay(isExpanded ? null : dayNum)}
-                  style={{ width: "100%", padding: "12px 0", display: "flex", justifyContent: "space-between", alignItems: "center", background: "transparent", border: "none", cursor: "pointer" }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: T.dark }}>Day {dayNum}</span>
-                    {isSameAsDay1 && <span style={{ fontSize: 11, color: T.g[400] }}>(Same as Day 1)</span>}
-                  </div>
-                  <span style={{ fontSize: 12, color: T.g[400] }}>{isExpanded ? "▲" : "▼"}</span>
-                </button>
-                
-                {/* BUG 6 FIX: Expanded view with meals and nested products */}
-                {isExpanded && (
-                  <div style={{ paddingBottom: 12 }}>
-                    {(Array.isArray(meals) ? meals : []).map((meal, mi) => {
-                      const mealLabel = meal?.meal_label || meal?.label || "Meal";
-                      const mealProducts = meal?.products || [];
-                      const mealProtein = meal?.total_protein_g || 0;
-                      
-                      return (
-                        <div key={mi} style={{ padding: "10px 12px", marginBottom: 6, background: T.g[50], borderRadius: 10 }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: T.dark }}>
-                              {mealIcons[mealLabel] || "🍽"} {mealLabel}
+              <div style={{ marginTop: 14, padding: 14, background: T.g[50], borderRadius: 12, border: "1px solid " + T.g[200] }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: T.brand, marginBottom: 10 }}>Day {expandedDay} Details</p>
+                {(Array.isArray(meals) ? meals : []).map((meal, mi) => {
+                  const mealLabel = meal?.meal_label || meal?.label || "Meal";
+                  const mealProducts = meal?.products || [];
+                  const mealProtein = meal?.total_protein_g || 0;
+                  
+                  return (
+                    <div key={mi} style={{ marginBottom: mi < meals.length - 1 ? 12 : 0 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: T.dark }}>
+                          {mealIcons[mealLabel] || "🍽"} {mealLabel}
+                        </span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: T.green, fontFamily: mono }}>{Math.round(mealProtein * 10) / 10}g</span>
+                      </div>
+                      {(Array.isArray(mealProducts) ? mealProducts : []).map((p, pi) => {
+                        const productName = typeof p === 'string' ? p : (p?.product_name || p?.name || 'Product');
+                        const quantity = typeof p === 'object' ? (p?.quantity || '') : '';
+                        const proteinG = typeof p === 'object' ? (p?.protein_g || 0) : 0;
+                        
+                        return (
+                          <div key={pi} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginLeft: 20, marginBottom: 3 }}>
+                            <span style={{ fontSize: 11, color: T.g[600] }}>
+                              • {productName} {quantity && `(${quantity})`}
                             </span>
-                            <span style={{ fontSize: 12, fontWeight: 700, color: T.green, fontFamily: mono }}>{Math.round(mealProtein * 10) / 10}g</span>
+                            {proteinG > 0 && (
+                              <span style={{ fontSize: 10, color: T.g[500] }}>{Math.round(proteinG * 10) / 10}g</span>
+                            )}
                           </div>
-                          {/* BUG 6 FIX: Render nested products with quantity */}
-                          {(Array.isArray(mealProducts) ? mealProducts : []).map((p, pi) => {
-                            const productName = typeof p === 'string' ? p : (p?.product_name || p?.name || 'Product');
-                            const quantity = typeof p === 'object' ? (p?.quantity || '') : '';
-                            const proteinG = typeof p === 'object' ? (p?.protein_g || 0) : 0;
-                            
-                            return (
-                              <div key={pi} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginLeft: 24, marginBottom: 4 }}>
-                                <span style={{ fontSize: 12, color: T.g[600] }}>
-                                  • {productName} {quantity && `(${quantity})`}
-                                </span>
-                                {proteinG > 0 && (
-                                  <span style={{ fontSize: 10, color: T.g[500] }}>{Math.round(proteinG * 10) / 10}g</span>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                        );
+                      })}
+                    </div>
+                  );
+                })}
               </div>
             );
-          })}
+          })()}
           
-          {/* BUG 6 FIX: Fallback to weekly_text if structured data fails */}
+          {/* Fallback to weekly_text if structured data fails */}
           {weeklyPlan.length === 0 && (Array.isArray(weeklyText) ? weeklyText : []).length > 0 && (
             <div style={{ padding: "10px 0" }}>
               {weeklyText.map((text, i) => (
