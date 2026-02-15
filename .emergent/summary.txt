@@ -1,92 +1,80 @@
 <analysis>**original_problem_statement:**
-The user wants to build a React mobile-first web app called Protein Planner v2. The app is a guided wizard to help users calculate their protein needs, plan meals with Licious products, and pre-order supplies.
+The user wants to build a React mobile-first web app called Protein Planner v2. The app is a guided wizard to help users calculate their protein needs, plan meals with Licious products, and pre-order supplies. The entire application must be contained within a single  file.
 
 **PRODUCT REQUIREMENTS:**
--   **Tech Stack:** React (hooks only), Inline styles, Google Fonts (, ). No external UI libraries. The entire application must be contained within a single  file.
--   **API Endpoints:**
-    -   Onboarding: 
-    -   Meal Plan: 
-    -   Weekly Cart: 
--   **Screen Flow & Features:**
-    1.  **Onboarding Redesign:** A Macro Fork screen, a disclaimer, a 6-step calculator wizard, and a results screen.
-    2.  **Visual Meal Planning:** The UI is driven by a  field from the backend API, rendering specific visual components for different steps like , , , etc.
-    3.  **Weekly Order Flow:** After meal planning is complete, the app should transition to a weekly order flow controlled by the  endpoint before showing the final cart.
-    4.  **Error Handling:** When an API call fails or returns an unrecognized response, the app must show a text input to allow the user to continue the conversation manually.
--   **Critical Rules:**
-    -   A single  must persist across all API calls.
-    -   UI components must collapse into summary badges after being used.
-    -   Product selection logic: Max 1 product per category; tapping another product in the same category should swap the selection.
-    -   All interactive elements (CTAs) must be disabled after a click to prevent double submissions.
-    -   The frontend must be defensive and handle inconsistent data structures from the backend (e.g., object vs. array, alternate field names).
+The backend has been updated to a deterministic state engine (v3). The frontend must be updated to match the new comprehensive specification provided by the user. The core requirements are:
+-   **Single Endpoint:** The entire meal planning flow is driven by the  endpoint.
+-   **State-Driven UI:** All UI is rendered based on a  field from the API response.
+-   **New UI Components:** Implement new components for  and .
+-   **Overhauled Components:** Update all existing meal planning components (, , , , , , , , , ) to match the new detailed V3 specifications for UI, data structures, and UX.
+-   **Structured JSON Payloads:** All user interactions must send a structured JSON object in the  field of the API request, as defined in the V3 spec.
+-   **Key UX Changes:**
+    -    must group products by their source category (e.g., Eggs, Chicken).
+    -    must include complex logic for pack utilization choices (same meal multi-day, use for other meal, switch to smaller pack).
+    -   A persistent running cost banner must be visible during meal planning.
+    -   Extensive Edit functionality must be available at , , and  stages, allowing the user to go back and change a specific meal.
+-   **No File Refactoring:** The application must remain a single monolithic  component.
 
 **User's preferred language**: English
 
 **what currently exists?**
-The application is a single, monolithic React component () that dynamically renders a multi-step wizard. It includes the onboarding flow and a visual meal planner. Several rounds of bug fixes have been attempted to make the app more robust against an inconsistent backend API, but significant issues remain. The latest round of fixes introduced a new critical crash. The user has explicitly forbidden refactoring the  file into smaller components.
+The application is a single, monolithic React component (). It contains the full onboarding and meal planning wizard. The agent has recently completed two major tasks:
+1.  A comprehensive defensive programming audit, adding guards for , , and property access to prevent crashes from inconsistent API data. This was verified by the testing agent.
+2.  A refactor to support the v2 state engine, which involved merging two API endpoints, removing old components, and switching user inputs from plain text to a structured JSON format.
+
+The current code is stable but is now outdated, as the backend has been upgraded to v3, which requires a complete overhaul of the meal planning flow as specified in the last user message.
 
 **Last working item**:
--   **Last item agent was working:** The agent was tasked with fixing a critical bug where the app crashes with a  error. This is the third instance of a  related crash due to the backend sending an object instead of an array. The user provided a specific fix for the  component and a mandate to proactively guard **every**  call in the codebase with an  check.
+-   **Last item agent was working:** The agent was preparing to implement the Frontend Updates for State Engine v3 — Comprehensive Spec. This is a major feature overhaul. The agent acknowledged the new spec and viewed the  file to assess the scope of changes required. No code has been written for the V3 spec yet.
 -   **Status:** NOT STARTED
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** frontend testing agent (After applying the fixes, the agent must test the entire meal planning flow to ensure no  errors occur in any component and that all other recent fixes are working as expected.)
+-   **Which testing method agent to use?** frontend testing agent. After implementation, a full end-to-end test of the new V3 flow is required, from  to , including all Edit paths.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1:** (P0) CRITICAL CRASH:  in the  component.
--   **Issue 2:** (P0) SYSTEMIC BUG: Multiple components crash when the backend API returns an object instead of an array for data that is expected to be iterable (e.g., , , ).
--   **Issue 3:** (P1) UNVERIFIED FIX: The critical flow from meal planning (Agent 2) to the weekly order (Agent 3) is broken. The app skips the weekly order screen and goes directly to an empty final cart.
--   **Issue 4:** (P1) UNVERIFIED FIX: All interactive buttons must be disabled after a click to prevent double API calls.
--   **Issue 5:** (P2) UNVERIFIED FIX: Fallback logic for when the backend returns a response without a  (should show a text input).
--   **Issue 6:** (P2) UNVERIFIED FIX: Numerous visual and data consistency bugs (stale badge values, incorrect distribution calculations, previously purchased products appearing as selectable).
+-   **Issue 1:** (P0) The entire application logic is incompatible with the new State Engine v3 backend.
 
 **Issues Detail:**
--   **Issue 1: CRITICAL CRASH: **
-    -   **Attempted fixes:** None yet. The agent received the user's instructions but has not acted on them.
+-   **Issue 1: Incompatibility with State Engine v3**
+    -   **Attempted fixes:** The agent has reviewed the V3 specification and viewed the existing  file. No implementation has started.
     -   **Next debug checklist:**
-        1.  Open .
-        2.  Locate the  component.
-        3.  Apply the user's provided fix: ensure the  variable is always an array before calling , with fallbacks.
-        4.  This is a patch. The real fix is Issue 2.
-    -   **Why fix this issue and what will be achieved with the fix?** This is an app-breaking crash that blocks the user from proceeding with their meal plan.
+        1.  Systematically create and update components as per the Frontend Updates for State Engine v3 — Comprehensive Spec.
+        2.  Start by implementing the new  and  components.
+        3.  Refactor existing components one-by-one, ensuring they handle the new  structures and send the correct structured JSON payloads.
+        4.  Pay close attention to the new UX requirements for  (group by source),  (utilization), and the Edit flows.
+    -   **Why fix this issue and what will be achieved with the fix?** To make the frontend functional with the new backend. This will deliver the complete, intended user experience.
     -   **Status:** NOT STARTED
-    -   **Is recurring issue?** Y
+    -   **Is recurring issue?** N
     -   **Should Test frontend/backend/both after fix?** frontend
-    -   **Blocked on other issue:** None. This is the primary blocker.
-
--   **Issue 2: SYSTEMIC BUG: Unsafe  calls on potentially non-array data**
-    -   **Attempted fixes:** The agent has fixed this issue for  and  in previous turns, but failed to apply the pattern proactively.
-    -   **Next debug checklist:**
-        1.  Search the entire  file for every instance of .
-        2.  For each instance, add a guard to ensure the variable is an array before the map is called. Use  and provide a safe fallback (e.g.,  or converting from an object if the format is known).
-    -   **Why fix this issue and what will be achieved with the fix?** This will fix the root cause of the recurring crashes and make the application resilient to the backend's inconsistent API responses.
-    -   **Status:** NOT STARTED
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** frontend
-    -   **Blocked on other issue:** None.
+    -   **Blocked on other issue:** None. This is the sole priority.
 
 **In progress Task List**:
 None.
 
 **Upcoming and Future Tasks**
-- **P0: Stabilize the Application:**
-    - Fix the  crash.
-    - Audit and harden every  call in the application.
-    - Verify that all previously implemented fixes from the COMPLETE FIX user message are working correctly, especially the Agent 3 flow, CTA disabling, and the text input fallback.
+- **P0: Implement Frontend for State Engine v3**
+    - Implement all new UI components (, ).
+    - Overhaul all existing meal planning components to match the V3 spec.
+    - Ensure all user interactions send the correct structured JSON payloads.
+    - Implement the Edit functionality for meals at the , , and  stages.
+- **P1: Deferred Functionality**
+    - Implement the Remove button functionality in the final cart view (currently deferred in the spec).
 
 **Completed work in this session**
--   Multiple rounds of bug fixes were attempted to address issues with state management, UI consistency, and data parsing.
--   A new  component was created to handle the flow for the third API agent.
--   Defensive programming patterns were added to several components (, ) to handle inconsistent API data formats.
--   Logic was added to disable CTA buttons after clicks using a  state.
--   A fallback UI with a text input was added for API responses that do not contain a .
+-   **Defensive Programming Audit (RESOLVED):** Systematically guarded all , , and  calls in . This fixed all  crashes and was verified by the testing agent.
+-   **State Engine v2 Refactor (COMPLETED):**
+    -   Merged Agent 2 () and Agent 3 () flows into a single endpoint.
+    -   Updated user interactions to send structured JSON payloads (v2 format).
+    -   Removed the old  and related components.
+-   **Onboarding Transition Fix (COMPLETED):** Fixed the flow from onboarding to meal planning by sending the correct initial message ().
 
 **Earlier issues found/mentioned but not fixed**
-The core systemic issue of the frontend not being robust enough to handle the backend's inconsistent data structures has not been fully resolved. While individual components were patched, the agent failed to perform a full audit as requested, leading to the latest  crash.
+None. The new V3 specification supersedes all previous minor bugs and unverified fixes.
 
 **Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork:** The  error. This has occurred three times, for , , and now .
+-   **Issue recurrence in previous fork:**  crash.
 -   **Recurrence count:** 3
--   **Status:** IN PROGRESS
+-   **Status:** RESOLVED. A full audit was performed, and all instances were guarded with . This was verified by the testing agent in .
 
 **Code Architecture**
 
@@ -96,8 +84,8 @@ The core systemic issue of the frontend not being robust enough to handle the ba
 -   **State Management:** React Hooks (, )
 -   **Styling:** Inline CSS-in-JS style objects.
 -   **Architecture:** Single Page Application (SPA) in a single monolithic component ().
--   **Dynamic UI:** The UI is rendered dynamically based on a  field received from the backend API.
--   **Defensive Programming:** The app requires robust checks for data types (object vs. array) and alternate field names due to an inconsistent backend.
+-   **State-Driven UI:** The UI is rendered dynamically based on a  field received from the backend API.
+-   **Defensive Programming:** The app contains robust checks for data types and missing properties.
 
 **key DB schema**
 N/A
@@ -107,52 +95,54 @@ None.
 
 **All files of reference**
 -   : The only file containing all application code.
+-   : Contains product requirements.
+-   : Test report from the last testing agent run, confirming the defensive programming fixes.
 
 **Areas that need refactoring**:
-The user has explicitly stated **NOT** to refactor  by splitting it into multiple files. However, the code *within* the components requires significant refactoring to implement defensive data handling and prevent crashes.
+The user has explicitly forbidden splitting  into multiple files. The required V3 implementation will serve as a major internal refactor of the components within .
 
 **key api endpoints**
 -   **Onboarding:** 
--   **Meal Planning:** 
--   **Weekly Cart:** 
+-   **Meal Planning (Primary):** 
 
 **Critical Info for New Agent**
--   **Highest Priority:** Your first task is to fix the  crash in .
--   **Global Audit Required:** After patching the  component, you MUST search for every  call in  and add  guards to prevent this type of crash from happening again. This is a direct and repeated instruction from the user.
--   **Verify Past Fixes:** The previous agent implemented a large number of fixes (COMPLETE FIX) that have not been tested. After stabilizing the app, you must verify that these are working, especially the critical path from meal planning to the weekly order screen.
--   **Backend is Unreliable:** Assume the backend API will send inconsistent data. Field names may differ ( vs. ), and data types may be wrong (object instead of array). All components must handle these variations gracefully.
--   **NO FILE REFACTORING:** Do not split  into multiple files.
+-   **Your ONLY task is to implement the Frontend Updates for State Engine v3 — Comprehensive Spec** provided in the last user message. This is a complete overhaul.
+-   The previous implementation is now obsolete. Follow the new spec meticulously for every component, data structure, and user interaction.
+-   Pay special attention to the new UX requirements: grouping products by source in , the utilization options in , and the Edit flows.
+-   All API calls to  must now send a structured JSON payload in the  field, as defined in the V3 spec.
+-   Do not attempt to split  into smaller files.
 
 **documents and test reports created in this job**
 -   
+-   
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User (LATEST):** Reports , provides a specific fix for , and reiterates the need to guard **every**  call in the codebase. **Status: Pending.**
-2.  **User:** Reports that  are not rendering and the Continue button is disabled due to the backend sending a string array instead of an object array for sources. Instructs agent to apply defensive patterns everywhere. **Status: Fix attempted, but led to the  bug.**
-3.  **User:** Reports that  because the backend is sending an object. Provides a fix to convert the object to an array. **Status: Fix attempted.**
-4.  **User:** Reports a new set of 5 critical bugs (Round 3), including the broken Agent 3 flow (blocker), non-disabling CTAs, and visual glitches. Provides detailed fix instructions. **Status: Fix attempted.**
-5.  **User:** Asks the agent to add a retry mechanism for failed API calls. **Status: Fix attempted.**
-6.  **Agent:** Finishes after claiming to have fixed the second round of 6 bugs. **Status: Incomplete, as the fixes were not verified and new bugs were immediately found.**
-7.  **User:** Reports a second round of 6 critical bugs, including the recurring  error. **Status: Fix attempted.**
-8.  **User:** Provides clarifications, including instructions **not** to refactor  and notes about backend logic changes. **Status: Acknowledged by agent.**
-9.  **Agent:** Proposes a plan to test and fix the 6 outstanding bugs. **Status: Approved by user.**
-10. **(Start of Fork):** Handoff summary details the state of the app with 6 unverified bug fixes.
+1.  **User (LATEST):** Provided a comprehensive Frontend Updates for State Engine v3 — Comprehensive Spec. This is the new blueprint for the application. **Status: Pending Implementation.**
+2.  **Agent:** Confirmed the fix for the onboarding-to-meal-planning transition was complete. **Status: Completed.**
+3.  **User:** Reported that the transition from onboarding to meal planning was stuck. **Status: Resolved.**
+4.  **Agent:** Finished the v2 refactor task. **Status: Completed.**
+5.  **User:** Provided the v2 refactor requirements (merge agents, use structured JSON). **Status: Implemented.**
+6.  **Agent:** Reported that the testing agent verified all defensive programming fixes were working correctly. **Status: Completed.**
+7.  **Agent:** Called the testing agent to validate the  crash fixes. **Status: Completed.**
+8.  **User:** Provided more detail on defensive programming requirements (, , etc.). **Status: Implemented.**
+9.  **Agent:** Proposed a plan to fix crashes via a comprehensive audit, which was approved. **Status: Implemented.**
+10. **(Start of Fork):** Handoff summary detailed the critical  crash.
 
 **Project Health Check:**
--   **Broken:** The application is in a non-functional state and crashes during the meal planning flow due to the  error.
+-   **Broken:** The application loads but is not functional, as its logic is incompatible with the new V3 backend state engine. It cannot proceed past the initial screen of the meal planning flow.
 
 **3rd Party Integrations**
 -   **n8n Webhooks:** Used for all backend logic.
 -   **Google Fonts:** , .
 
 **Testing status**
--   **Testing agent used after significant changes:** NO
+-   **Testing agent used after significant changes:** YES (to verify the defensive programming fixes for v2).
 -   **Troubleshoot agent used after agent stuck in loop:** NO
 -   **Test files created:** None
--   **Known regressions:** The  error is a recurring regression. The entire app is unstable due to a lack of comprehensive testing after each change.
+-   **Known regressions:** None from the bug-fixing phase. The current non-functional state is by design, pending the V3 upgrade.
 
 **Credentials to test flow:**
 N/A
 
 **What agent forgot to execute**
-The agent repeatedly failed to apply fixes globally despite user instructions. After fixing the  error for  and , it did not proactively check other components like , which led directly to the current crash. The core failure is not learning from repeated errors and applying the solution systemically.</analysis>
+Nothing. The agent successfully stabilized the application and was awaiting the next set of instructions, which was the comprehensive V3 spec. The next step is to execute that plan.</analysis>
