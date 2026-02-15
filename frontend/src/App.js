@@ -1932,65 +1932,127 @@ const TimeSlotSelect = ({ data, onSelect }) => {
   );
 };
 
-// NEW: Order Confirmed component (final state)
+// V3: Order Confirmed component (final state)
 const OrderConfirmed = ({ data }) => {
+  // V3: Handle ui_data fields
+  const deliverySlot = data?.delivery_slot || 'Scheduled';
+  const deliveryFrequency = data?.delivery_frequency || '';
+  const totalCartPrice = data?.total_cart_price || 0;
+  const dailyCost = data?.daily_cost || Math.round(totalCartPrice / 7);
+  const dailyProtein = data?.daily_protein || 104;
+  const supplementG = data?.supplement_g || 0;
+  
   // DEFENSIVE: Ensure arrays
   let cart = data?.cart || [];
   if (!Array.isArray(cart)) {
     cart = typeof cart === 'object' ? Object.values(cart) : [];
   }
   
-  let weeklyPlan = data?.weekly_plan || [];
-  if (!Array.isArray(weeklyPlan)) {
-    weeklyPlan = typeof weeklyPlan === 'object' ? Object.values(weeklyPlan) : [];
-  }
+  const frequencyLabels = {
+    daily: "Daily",
+    every_2_days: "Every 2 days",
+    every_3_days: "Every 3 days",
+    weekly: "Weekly"
+  };
   
-  const total = data?.total_cart_price || 0;
-  const deliverySlot = data?.delivery_slot || 'Scheduled';
-  const perDay = cart.length > 0 ? Math.round(total / 7) : 0;
+  const slotLabels = {
+    morning: "Morning (7-9 AM)",
+    afternoon: "Afternoon (12-2 PM)",
+    evening: "Evening (5-7 PM)"
+  };
   
   return (
     <div style={{ minHeight: "100vh", background: T.bg }}>
       {/* Success Header */}
-      <div style={{ background: "linear-gradient(150deg, " + T.green + ", #34D399)", padding: "24px 20px 48px", borderRadius: "0 0 24px 24px" }}>
+      <div style={{ background: "linear-gradient(150deg, " + T.green + ", #34D399)", padding: "24px 20px 48px", borderRadius: "0 0 28px 28px" }}>
         <div style={{ textAlign: "center" }}>
-          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px", fontSize: 32 }}>✓</div>
-          <h2 style={{ fontSize: 20, fontWeight: 800, color: "#fff", marginBottom: 4 }}>Order Confirmed!</h2>
-          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.8)" }}>Delivery: {deliverySlot}</p>
+          <div style={{ width: 72, height: 72, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px", fontSize: 36 }}>🎉</div>
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: "#fff", marginBottom: 6 }}>Your Protein Plan is Set!</h2>
+          
+          {/* V3: Show delivery frequency + slot */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.9)", background: "rgba(255,255,255,0.2)", padding: "4px 12px", borderRadius: 99 }}>
+              📦 {frequencyLabels[deliveryFrequency] || deliveryFrequency || "Delivery scheduled"}
+            </span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.9)", background: "rgba(255,255,255,0.2)", padding: "4px 12px", borderRadius: 99 }}>
+              ⏰ {slotLabels[deliverySlot] || deliverySlot}
+            </span>
+          </div>
         </div>
-        <div style={{ marginTop: 20, display: "flex", justifyContent: "space-between" }}>
-          <div><p style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700, marginBottom: 3 }}>Weekly Total</p><span style={{ fontSize: 28, fontWeight: 800, color: "#fff", fontFamily: mono }}>₹{total.toLocaleString()}</span></div>
-          <div style={{ textAlign: "right" }}><p style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700, marginBottom: 3 }}>Per Day</p><span style={{ fontSize: 28, fontWeight: 800, color: "#fff", fontFamily: mono }}>₹{perDay}</span></div>
+        
+        {/* Cost & Protein Summary */}
+        <div style={{ marginTop: 20, display: "flex", justifyContent: "space-around", padding: "14px 0", background: "rgba(255,255,255,0.1)", borderRadius: 14 }}>
+          <div style={{ textAlign: "center" }}>
+            <p style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700, marginBottom: 4 }}>Weekly</p>
+            <span style={{ fontSize: 24, fontWeight: 800, color: "#fff", fontFamily: mono }}>₹{totalCartPrice.toLocaleString()}</span>
+          </div>
+          <div style={{ width: 1, background: "rgba(255,255,255,0.2)" }} />
+          <div style={{ textAlign: "center" }}>
+            <p style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700, marginBottom: 4 }}>Daily</p>
+            <span style={{ fontSize: 24, fontWeight: 800, color: "#fff", fontFamily: mono }}>~₹{dailyCost}</span>
+          </div>
+          <div style={{ width: 1, background: "rgba(255,255,255,0.2)" }} />
+          <div style={{ textAlign: "center" }}>
+            <p style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700, marginBottom: 4 }}>Protein</p>
+            <span style={{ fontSize: 24, fontWeight: 800, color: "#fff", fontFamily: mono }}>{dailyProtein + supplementG}g</span>
+          </div>
         </div>
       </div>
       
       {/* Cart Items */}
-      <div style={{ padding: "0 14px", marginTop: -24 }}>
-        {(Array.isArray(cart) ? cart : []).map((item, i) => (
-          <div key={i} className={"up" + Math.min(i, 4)} style={{ marginBottom: 10, background: T.white, borderRadius: T.r.l, border: "1px solid " + T.g[100], boxShadow: T.sh.m, overflow: "hidden" }}>
-            <div style={{ display: "flex", gap: 12, padding: 12 }}>
-              <div style={{ width: 68, height: 68, borderRadius: T.r.m, background: T.g[100], overflow: "hidden", flexShrink: 0 }}>
-                {item?.image_url ? <img src={item.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { e.target.style.display = "none"; }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26 }}>🥩</div>}
+      <div style={{ padding: "0 16px", marginTop: -20 }}>
+        <div style={{ background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, overflow: "hidden" }}>
+          <div style={{ padding: "14px 16px", borderBottom: "1px solid " + T.g[100] }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: T.dark }}>🛒 Your Cart ({cart.length} items)</p>
+          </div>
+          {(Array.isArray(cart) ? cart : []).map((item, i) => (
+            <div key={i} style={{ display: "flex", gap: 12, padding: "12px 16px", borderBottom: i < cart.length - 1 ? "1px solid " + T.g[100] : "none" }}>
+              <div style={{ width: 56, height: 56, borderRadius: 10, background: T.g[100], overflow: "hidden", flexShrink: 0 }}>
+                {item?.image_url ? (
+                  <img src={item.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { e.target.style.display = "none"; }} />
+                ) : (
+                  <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🥩</div>
+                )}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <h4 style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 2, lineHeight: 1.3 }}>{item?.product_name || 'Product'}</h4>
-                <p style={{ fontSize: 11, color: T.g[500], marginBottom: 5 }}>{(item?.pack_size_label || '') + " × " + (item?.packs_needed || 1)}</p>
+                <p style={{ fontSize: 11, color: T.g[500], marginBottom: 4 }}>{item?.pack_size_label || ''} × {item?.packs_needed || 1}</p>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 16, fontWeight: 800, color: T.brand, fontFamily: mono }}>₹{item?.total_price || item?.price || 0}</span>
-                  {item?.product_page_url && <a href={item.product_page_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, fontWeight: 700, color: T.brand, textDecoration: "none", padding: "2px 8px", borderRadius: T.r.full, background: T.brandLt }}>View on Licious</a>}
+                  <span style={{ fontSize: 15, fontWeight: 800, color: T.brand, fontFamily: mono }}>₹{item?.total_price || item?.price || 0}</span>
+                  {item?.product_page_url && (
+                    <a href={item.product_page_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, fontWeight: 700, color: T.brand, textDecoration: "none", padding: "3px 10px", borderRadius: T.r.full, background: T.brandLt }}>
+                      View →
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
-            {item?.usage_description && <div style={{ padding: "6px 12px", background: T.g[50], borderTop: "1px solid " + T.g[100], fontSize: 11, color: T.g[500], fontWeight: 500 }}>📋 {item.usage_description}</div>}
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
       
-      {/* Success Message */}
-      <div style={{ padding: "20px 20px 36px" }}>
-        <div style={{ padding: 14, background: T.greenLt, borderRadius: T.r.m, marginBottom: 12, textAlign: "center" }}>
-          <p style={{ fontSize: 13, color: T.green, fontWeight: 700 }}>🎉 Your weekly protein supply is ready!</p>
-          <p style={{ fontSize: 11, color: T.g[600], marginTop: 4 }}>You'll receive a confirmation shortly.</p>
+      {/* V3: Action Buttons */}
+      <div style={{ padding: "20px 16px 36px" }}>
+        {supplementG > 0 && (
+          <div style={{ padding: 12, background: T.blueLt, borderRadius: 10, marginBottom: 12, textAlign: "center" }}>
+            <p style={{ fontSize: 12, color: T.blue, fontWeight: 600 }}>
+              🥤 {dailyProtein}g from food + {supplementG}g supplements = {dailyProtein + supplementG}g total daily protein
+            </p>
+          </div>
+        )}
+        
+        <div style={{ padding: 14, background: T.greenLt, borderRadius: T.r.m, marginBottom: 16, textAlign: "center" }}>
+          <p style={{ fontSize: 14, color: T.green, fontWeight: 700 }}>🎉 Your weekly protein supply is ready!</p>
+          <p style={{ fontSize: 11, color: T.g[600], marginTop: 4 }}>Open each product on Licious to add to your cart</p>
+        </div>
+        
+        <div style={{ display: "flex", gap: 10 }}>
+          <Btn onClick={() => window.location.reload()} v="secondary" full style={{ flex: 1 }}>
+            Start Over
+          </Btn>
+          <Btn onClick={() => {}} full style={{ flex: 1 }}>
+            Share Plan
+          </Btn>
         </div>
       </div>
     </div>
