@@ -608,7 +608,7 @@ const calculateDistribution = (label, target) => {
 
 // Collapsed Badge for previous responses
 // FIX 4: Now accepts msgs array to look for latest confirmed budget values
-// V3: Collapsed Badge for previous responses
+// BUG 8 FIX: Collapsed Badge - correct product count from user's selection
 const CollapsedBadge = ({ type, data, fullData, msgs = [], msgIndex = 0 }) => {
   let text = "";
   switch (type) {
@@ -660,7 +660,28 @@ const CollapsedBadge = ({ type, data, fullData, msgs = [], msgIndex = 0 }) => {
       text = cut ? `✓ Cut: ${cut}` : "✓ Cut type selected";
       break;
     case 'product_select':
-      const productCount = (data?.products || []).length;
+      // BUG 8 FIX: Get actual selected products from the user's selection (next message)
+      // Look for the user message that contains the products selection
+      let actualProducts = [];
+      for (let i = msgIndex + 1; i < msgs.length && i < msgIndex + 3; i++) {
+        const m = msgs[i];
+        if (m.role === 'user' && m.text) {
+          try {
+            const parsed = JSON.parse(m.text);
+            if (parsed.products && Array.isArray(parsed.products)) {
+              actualProducts = parsed.products;
+              break;
+            }
+          } catch (e) {
+            // Not JSON, continue
+          }
+        }
+      }
+      // Fallback to data.products if available
+      if (actualProducts.length === 0 && data?.products) {
+        actualProducts = Array.isArray(data.products) ? data.products : [];
+      }
+      const productCount = actualProducts.length;
       text = productCount > 0 ? `✓ ${productCount} product${productCount === 1 ? '' : 's'} selected` : "✓ Products selected";
       break;
     case 'portion_confirm':
