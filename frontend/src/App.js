@@ -2103,6 +2103,12 @@ const MealPlanningWizard = ({ sessionId, onComplete, onRestart }) => {
   const [error, setError] = useState(null);
   const [lastMessage, setLastMessage] = useState(null);
   const hasSent = useRef(false);
+  // BUG 7 FIX: Store products catalog from first product_select for CartEditor
+  const [productsCatalog, setProductsCatalog] = useState([]);
+  // BUG 7: Cart editor state
+  const [cartEditorOpen, setCartEditorOpen] = useState(false);
+  const [cartEditorItem, setCartEditorItem] = useState(null);
+  const [localCart, setLocalCart] = useState(null);
 
   useEffect(() => {
     if (!hasSent.current) {
