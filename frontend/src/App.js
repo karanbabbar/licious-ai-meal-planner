@@ -1004,13 +1004,18 @@ const CutChips = ({ data, onSelect }) => {
   );
 };
 
+// V3: Product Select Component - GROUP BY SOURCE with "pick 1" per category
 const ProductCardGrid = ({ data, onSelect }) => {
-  const [selected, setSelected] = useState([]);
+  const [selected, setSelected] = useState({});  // V3: { source: productName }
   const [submitted, setSubmitted] = useState(false);
   
-  // DEFENSIVE: handle alternate field names from backend with safe defaults
+  // V3: Handle ui_data fields
   const mealLabel = data?.meal_label || data?.meal || "Meal";
-  const mealTarget = data?.protein_target || data?.target || 50;
+  const proteinTarget = data?.protein_target || data?.target || 50;
+  const sourcesSelected = data?.sources_selected || [];
+  
+  // V3: products_by_source is the preferred grouping structure
+  const productsBySourceMap = data?.products_by_source || {};
   
   // DEFENSIVE: Ensure rawProducts is always an array
   let rawProducts = data?.products || data?.items || [];
@@ -1022,113 +1027,127 @@ const ProductCardGrid = ({ data, onSelect }) => {
     }
   }
   
-  // Filter out products with price 0 (already purchased)
-  const selectableProducts = (Array.isArray(rawProducts) ? rawProducts : []).filter(p => (p?.price || 0) > 0);
-  const alreadyOrderedProducts = (Array.isArray(rawProducts) ? rawProducts : []).filter(p => (p?.price || 0) === 0);
+  // V3: Group products by category/source
+  const productsByCategory = {};
   
-  // Group selectable products by category
-  const productsByCategory = selectableProducts.reduce((acc, p) => {
-    const cat = p?.category || p?.source || 'other';
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(p);
-    return acc;
-  }, {});
+  // Use products_by_source keys if available, otherwise derive from products
+  const sourceKeys = Object.keys(productsBySourceMap).length > 0 
+    ? Object.keys(productsBySourceMap)
+    : [...new Set((Array.isArray(rawProducts) ? rawProducts : []).map(p => (p?.category || p?.source || 'other').toLowerCase()))];
   
-  // Calculate rough protein estimate
-  const totalSelectedProtein = selected.reduce((sum, productName) => {
-    const product = selectableProducts.find(p => (p?.product_name || p?.name) === productName);
-    if (!product) return sum;
-    if ((product?.category || product?.source) === 'eggs') return sum + 6.5 * 4;
-    return sum + (product?.protein_per_100g || 20) * 1.2;
-  }, 0);
+  sourceKeys.forEach(source => {
+    const sourceProducts = (Array.isArray(rawProducts) ? rawProducts : [])
+      .filter(p => (p?.category || p?.source || '').toLowerCase() === source.toLowerCase());
+    if (sourceProducts.length > 0) {
+      productsByCategory[source] = sourceProducts;
+    }
+  });
   
-  const canSelectMore = totalSelectedProtein < mealTarget * 1.3;
+  // Calculate how many sources need selections
+  const totalSourcesToSelect = Object.keys(productsByCategory).length;
+  const selectedCount = Object.keys(selected).length;
+  const allSourcesSelected = selectedCount >= totalSourcesToSelect;
   
-  // Get selected sources for reminder
-  const selectedSources = [...new Set(selectableProducts.filter(p => selected.includes(p?.product_name || p?.name)).map(p => p?.category || p?.source))];
-  const allSources = [...new Set(selectableProducts.map(p => p?.category || p?.source))];
-  const sourcesWithoutSelection = (Array.isArray(allSources) ? allSources : []).filter(s => !selectedSources.includes(s));
-  
-  // Handle product selection with SWAP logic (max 1 per category)
-  const handleProductSelect = (product) => {
+  // Handle product selection - V3: one product per source category
+  const handleProductSelect = (product, sourceCategory) => {
     if (submitted) return;
     const productName = product?.product_name || product?.name;
-    const category = product.category || product.source || 'other';
+    const category = (sourceCategory || product?.category || product?.source || 'other').toLowerCase();
     
     setSelected(prev => {
-      const isSelected = prev.includes(productName);
-      if (isSelected) {
-        // Deselect
-        return prev.filter(n => n !== productName);
-      } else {
-        // SWAP: Remove any existing selection from same category, then add new
-        const filtered = prev.filter(n => {
-          const p = selectableProducts.find(prod => (prod.product_name || prod.name) === n);
-          return (p?.category || p?.source) !== category;
-        });
-        return [...filtered, productName];
+      // If same product is already selected, deselect
+      if (prev[category] === productName) {
+        const { [category]: _, ...rest } = prev;
+        return rest;
       }
+      // Otherwise select this product for the category (replaces any previous)
+      return { ...prev, [category]: productName };
     });
   };
   
   const handleSubmit = () => {
-    if (selected.length === 0 || submitted) return;
+    if (!allSourcesSelected || submitted) return;
     setSubmitted(true);
-    // Send structured JSON instead of text
-    onSelect({ products: selected });
+    // V3: Send array of selected product names
+    onSelect({ products: Object.values(selected) });
   };
   
-  // Render products grouped by category with "Pick 1" label
-  const renderCategoryGroup = (category, products) => {
-    const categoryIcons = { chicken: '🍗', eggs: '🥚', fish: '🐟', mutton: '🥩' };
-    const categoryLabels = { chicken: 'Chicken', eggs: 'Eggs', fish: 'Fish', mutton: 'Mutton' };
+  const categoryIcons = { chicken: '🍗', eggs: '🥚', fish: '🐟', mutton: '🍖' };
+  const categoryLabels = { chicken: 'Chicken', eggs: 'Eggs', fish: 'Fish', mutton: 'Mutton' };
+  
+  // Render a category section with its products
+  const renderCategorySection = (category, products) => {
+    const icon = categoryIcons[(category || '').toLowerCase()] || '🍖';
+    const label = categoryLabels[(category || '').toLowerCase()] || category;
+    const selectedProduct = selected[category.toLowerCase()];
+    
+    // V3: For chicken/fish/mutton, show cut type in header if available
+    const cutType = products[0]?.cut_type;
+    const headerLabel = cutType ? `${label} (${cutType})` : label;
     
     return (
-      <div key={category} style={{ marginBottom: 16 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: T.dark }}>
-            {categoryIcons[(category || '').toLowerCase()] || '🥩'} {categoryLabels[(category || '').toLowerCase()] || category}
+      <div key={category} style={{ marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: T.dark }}>
+            {icon} {headerLabel}
           </span>
-          <span style={{ fontSize: 10, fontWeight: 700, color: T.brand, background: T.brandLt, padding: "3px 8px", borderRadius: 99 }}>
-            Pick 1
+          <span style={{ 
+            fontSize: 10, fontWeight: 700, 
+            color: selectedProduct ? T.green : T.brand, 
+            background: selectedProduct ? T.greenLt : T.brandLt, 
+            padding: "4px 10px", borderRadius: 99 
+          }}>
+            {selectedProduct ? "✓ Selected" : "Pick 1"}
           </span>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {(Array.isArray(products) ? products : []).map((p, i) => {
             const productName = p?.product_name || p?.name || 'Product';
-            const productCategory = p?.category || p?.source || 'other';
-            const isSelected = selected.includes(productName);
-            const proteinDisplay = (productCategory || '').toLowerCase() === 'eggs'
-              ? '6.5g/egg'
+            const productCategory = (p?.category || p?.source || category || 'other').toLowerCase();
+            const isSelected = selected[productCategory] === productName;
+            
+            // V3: Show protein_per_pack for better comparison
+            const proteinPerPack = p?.protein_per_pack || 0;
+            const proteinDisplay = productCategory === 'eggs'
+              ? `${proteinPerPack}g/pack`
               : p?.protein_per_100g 
                 ? `${p.protein_per_100g}g/100g` 
-                : '';
+                : proteinPerPack ? `${Math.round(proteinPerPack)}g/pack` : '';
             
             return (
-              <button key={i} onClick={() => handleProductSelect(p)} disabled={submitted} style={{
-                padding: 8, borderRadius: 14, border: "2px solid " + (isSelected ? T.brand : T.g[200]),
-                background: isSelected ? T.brandLt : T.white, cursor: submitted ? "not-allowed" : "pointer", textAlign: "left",
-                boxShadow: isSelected ? "0 4px 12px " + T.brand + "15" : "0 1px 4px rgba(0,0,0,0.04)",
+              <button key={i} onClick={() => handleProductSelect(p, category)} disabled={submitted} style={{
+                padding: 10, borderRadius: 14, 
+                border: "2px solid " + (isSelected ? T.brand : T.g[200]),
+                background: isSelected ? T.brandLt : T.white, 
+                cursor: submitted ? "not-allowed" : "pointer", 
+                textAlign: "left",
+                boxShadow: isSelected ? "0 4px 12px " + T.brand + "20" : "0 1px 4px rgba(0,0,0,0.04)",
                 opacity: submitted ? 0.7 : 1,
+                transition: "all .2s"
               }}>
                 <div style={{ width: "100%", aspectRatio: "1", borderRadius: 10, background: T.g[100], overflow: "hidden", marginBottom: 8, position: "relative" }}>
-                  {p?.image_url ? <img src={p.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => e.target.style.display = "none"} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🥩</div>}
+                  {p?.image_url ? (
+                    <img src={p.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => e.target.style.display = "none"} />
+                  ) : (
+                    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>{icon}</div>
+                  )}
                   {isSelected && (
-                    <div style={{ position: "absolute", top: 6, right: 6, width: 22, height: 22, borderRadius: "50%", background: T.brand, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ position: "absolute", top: 6, right: 6, width: 24, height: 24, borderRadius: "50%", background: T.brand, display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <span style={{ color: "#fff", fontSize: 12, fontWeight: 800 }}>✓</span>
                     </div>
                   )}
                 </div>
-                <p style={{ fontSize: 11, fontWeight: 700, color: T.dark, lineHeight: 1.3, marginBottom: 4, minHeight: 28 }}>{productName}</p>
+                <p style={{ fontSize: 12, fontWeight: 700, color: T.dark, lineHeight: 1.3, marginBottom: 4, minHeight: 32 }}>{productName}</p>
+                <p style={{ fontSize: 10, color: T.g[500], marginBottom: 6 }}>{p?.pack_size_label || p?.pack_size || ''}</p>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 14, fontWeight: 800, color: T.brand, fontFamily: mono }}>₹{p?.price || 0}</span>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: T.brand, fontFamily: mono }}>₹{p?.price || 0}</span>
                   {proteinDisplay && (
-                    <span style={{ fontSize: 9, fontWeight: 700, color: T.green, background: T.greenLt, padding: "2px 6px", borderRadius: 99 }}>
+                    <span style={{ fontSize: 9, fontWeight: 700, color: T.green, background: T.greenLt, padding: "3px 6px", borderRadius: 99 }}>
                       {proteinDisplay}
                     </span>
                   )}
                 </div>
-                <p style={{ fontSize: 10, color: T.g[400], marginTop: 3 }}>{p?.pack_size_label || p?.pack_size || ''}</p>
               </button>
             );
           })}
@@ -1139,38 +1158,38 @@ const ProductCardGrid = ({ data, onSelect }) => {
   
   return (
     <div className="si" style={{ marginTop: 8 }}>
-      <p style={{ fontSize: 12, color: T.g[400], marginBottom: 10 }}>Tap to select products (max 1 per category)</p>
-      
-      {!canSelectMore && (
-        <div style={{ padding: "10px 14px", background: T.amberLt, border: "1px solid " + T.amber, borderRadius: 12, marginBottom: 8, fontSize: 12, color: T.amber, fontWeight: 600 }}>
-          ⚠️ Selected products may exceed your {mealTarget}g target. You can adjust portions in the next step.
-        </div>
-      )}
-      
-      {/* Show already ordered products (from previous meals) */}
-      {(Array.isArray(alreadyOrderedProducts) ? alreadyOrderedProducts : []).length > 0 && (
-        <div style={{ marginBottom: 16, padding: 12, background: T.greenLt, borderRadius: 12, border: "1px solid " + T.green + "20" }}>
-          <p style={{ fontSize: 11, fontWeight: 700, color: T.green, marginBottom: 6 }}>✓ Already in your order</p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {(Array.isArray(alreadyOrderedProducts) ? alreadyOrderedProducts : []).map((p, i) => (
-              <span key={i} style={{ fontSize: 11, fontWeight: 600, color: T.g[600], padding: "4px 10px", background: T.white, borderRadius: 99, border: "1px solid " + T.g[200] }}>
-                {p?.product_name || 'Product'}
-              </span>
-            ))}
+      {/* Header */}
+      <div style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+          <div style={{ 
+            width: 36, height: 36, borderRadius: 10, 
+            background: mealLabel === "Breakfast" ? T.brandLt : mealLabel === "Lunch" ? T.greenLt : T.blueLt,
+            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18
+          }}>
+            {mealLabel === "Breakfast" ? "🌅" : mealLabel === "Lunch" ? "☀️" : "🌙"}
+          </div>
+          <div>
+            <p style={{ fontSize: 15, fontWeight: 800, color: T.dark }}>{mealLabel} — Pick products</p>
+            <p style={{ fontSize: 12, color: T.g[500] }}>{proteinTarget}g protein target</p>
           </div>
         </div>
+        <p style={{ fontSize: 12, color: T.g[400] }}>Select 1 product from each category below</p>
+      </div>
+      
+      {/* V3: Render each category section */}
+      {Object.entries(productsByCategory).map(([category, products]) => 
+        renderCategorySection(category, products)
       )}
       
-      {Object.entries(productsByCategory || {}).map(([category, products]) => renderCategoryGroup(category, products))}
-      
-      {(Array.isArray(sourcesWithoutSelection) ? sourcesWithoutSelection : []).length > 0 && selected.length > 0 && (
-        <div style={{ padding: "8px 12px", background: T.blueLt, borderRadius: 10, fontSize: 12, color: T.blue, marginTop: 8 }}>
-          💡 Don't forget to pick a {(Array.isArray(sourcesWithoutSelection) ? sourcesWithoutSelection : []).join(" and ")} product too!
+      {/* Selection status */}
+      {selectedCount > 0 && !allSourcesSelected && (
+        <div style={{ padding: "10px 14px", background: T.amberLt, border: "1px solid " + T.amber + "40", borderRadius: 12, marginBottom: 12, fontSize: 12, color: T.amber, fontWeight: 600 }}>
+          ⚠️ Select 1 product from each category ({selectedCount}/{totalSourcesToSelect} selected)
         </div>
       )}
       
-      <Btn onClick={handleSubmit} full disabled={selected.length === 0 || submitted} loading={submitted} style={{ marginTop: 16 }}>
-        {submitted ? "Submitting..." : "Select These →"}
+      <Btn onClick={handleSubmit} full disabled={!allSourcesSelected || submitted} loading={submitted} style={{ marginTop: 8 }}>
+        {submitted ? "Submitting..." : allSourcesSelected ? "Select These Products →" : `Select from all categories (${selectedCount}/${totalSourcesToSelect})`}
       </Btn>
     </div>
   );
