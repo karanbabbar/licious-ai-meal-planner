@@ -1195,13 +1195,15 @@ const ProductCardGrid = ({ data, onSelect }) => {
   );
 };
 
+// V3: Portion Confirm Component - portions summary + utilization options per product
 const PortionConfirmCard = ({ data, onConfirm }) => {
   const [utilization, setUtilization] = useState({});
   const [locked, setLocked] = useState(false);
   
-  // DEFENSIVE: handle alternate field names from backend with safe defaults
+  // V3: Handle ui_data fields
   const mealLabel = data?.meal_label || data?.meal || "Meal";
   const proteinTarget = data?.protein_target || data?.target || 50;
+  const price = data?.price || 0;
   
   // DEFENSIVE: Ensure portions is always an array
   let portions = data?.portions || data?.items || [];
@@ -1223,81 +1225,158 @@ const PortionConfirmCard = ({ data, onConfirm }) => {
     }
   }
   
-  const total = Math.round((Array.isArray(portions) ? portions : []).reduce((s, p) => s + (p?.protein_g || p?.protein || 0), 0) * 10) / 10;
+  const totalProtein = data?.total_protein || (Array.isArray(portions) ? portions : []).reduce((s, p) => s + (p?.protein_g || p?.protein || 0), 0);
+  const total = Math.round(totalProtein * 10) / 10;
+  
+  // V3: Check if all products with utilization options have been selected
+  const allUtilizationSelected = (Array.isArray(utilizationOptions) ? utilizationOptions : []).every(
+    item => utilization[item?.product_name || item?.name]
+  );
+  
+  const handleUtilizationSelect = (productName, value) => {
+    if (locked) return;
+    setUtilization(prev => ({ ...prev, [productName]: value }));
+  };
   
   const handleConfirm = () => {
     if (locked) return;
+    // V3: Check if all utilization options are selected
+    if ((Array.isArray(utilizationOptions) ? utilizationOptions : []).length > 0 && !allUtilizationSelected) return;
     setLocked(true);
-    // Send structured JSON instead of text
-    onConfirm({ utilization: utilization || {} });
+    // V3: Send utilization map
+    onConfirm({ utilization: utilization });
   };
+  
+  const categoryIcons = { chicken: '🍗', eggs: '🥚', fish: '🐟', mutton: '🍖' };
   
   return (
     <div className="si">
-      {/* Portion Summary */}
-      <div style={{ padding: 14, background: T.white, borderRadius: 16, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <p style={{ fontSize: 13, fontWeight: 800, color: T.dark }}>{mealLabel} portions</p>
-          <span style={{ fontSize: 11, fontWeight: 700, color: total >= proteinTarget ? T.green : T.amber, background: total >= proteinTarget ? T.greenLt : T.amberLt, padding: "3px 8px", borderRadius: 99 }}>
-            {total >= proteinTarget ? "✓ Target met" : (Math.round(total * 10) / 10) + "/" + proteinTarget + "g"}
+      {/* Section 1: Portions Summary */}
+      <div style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 18 }}>{mealLabel === "Breakfast" ? "🌅" : mealLabel === "Lunch" ? "☀️" : "🌙"}</span>
+            <p style={{ fontSize: 15, fontWeight: 800, color: T.dark }}>{mealLabel}</p>
+          </div>
+          <span style={{ fontSize: 11, fontWeight: 700, color: total >= proteinTarget ? T.green : T.amber, background: total >= proteinTarget ? T.greenLt : T.amberLt, padding: "4px 10px", borderRadius: 99 }}>
+            {total >= proteinTarget ? "✓ Target met" : `${total}/${proteinTarget}g`}
           </span>
         </div>
+        
         {(Array.isArray(portions) ? portions : []).map((p, i) => {
           const productName = p?.product_name || p?.name || "Product";
+          const category = (p?.category || '').toLowerCase();
+          const icon = categoryIcons[category] || '🍖';
           const proteinG = p?.protein_g || p?.protein || 0;
           const quantity = p?.quantity || p?.qty || "";
           const packInfo = p?.pack_info || p?.pack || "";
+          const remaining = p?.remaining || "";
           
           return (
-            <div key={i} style={{ marginBottom: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: T.dark }}>{productName} {quantity && `(${quantity})`}</span>
-                <span style={{ fontSize: 13, fontWeight: 800, color: T.green, fontFamily: mono }}>{(Math.round(proteinG * 10) / 10)}g</span>
+            <div key={i} style={{ padding: "12px 0", borderBottom: i < portions.length - 1 ? "1px solid " + T.g[100] : "none" }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                {p?.image_url ? (
+                  <div style={{ width: 44, height: 44, borderRadius: 10, background: T.g[100], overflow: "hidden", flexShrink: 0 }}>
+                    <img src={p.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => e.target.style.display = "none"} />
+                  </div>
+                ) : (
+                  <span style={{ fontSize: 28, flexShrink: 0 }}>{icon}</span>
+                )}
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: T.dark }}>{productName}</span>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: T.green, fontFamily: mono }}>{Math.round(proteinG * 10) / 10}g</span>
+                  </div>
+                  {quantity && <p style={{ fontSize: 12, color: T.g[600], marginBottom: 2 }}>{quantity} → {Math.round(proteinG * 10) / 10}g protein</p>}
+                  {packInfo && <p style={{ fontSize: 11, color: T.g[400] }}>{packInfo}</p>}
+                  {remaining && <p style={{ fontSize: 11, color: T.amber, fontWeight: 600, marginTop: 4 }}>• {remaining}</p>}
+                </div>
               </div>
-              <div style={{ height: 5, background: T.g[100], borderRadius: 3, overflow: "hidden" }}>
-                <div style={{ height: "100%", width: Math.min(100, (proteinG / proteinTarget) * 100) + "%", background: "linear-gradient(90deg, " + T.green + ", #34D399)", borderRadius: 3, transition: "width .6s ease" }} />
+              
+              {/* Progress bar */}
+              <div style={{ height: 4, background: T.g[100], borderRadius: 2, overflow: "hidden", marginTop: 8 }}>
+                <div style={{ height: "100%", width: Math.min(100, (proteinG / proteinTarget) * 100) + "%", background: "linear-gradient(90deg, " + T.green + ", #34D399)", borderRadius: 2, transition: "width .6s ease" }} />
               </div>
-              {packInfo && <span style={{ fontSize: 10, color: T.g[400], marginTop: 2, display: "block" }}>from {packInfo}</span>}
             </div>
           );
         })}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0 0", borderTop: "1px solid " + T.g[100], marginTop: 4 }}>
-          <span style={{ fontSize: 13, fontWeight: 800, color: T.dark }}>Total</span>
-          <span style={{ fontSize: 16, fontWeight: 800, color: T.green, fontFamily: mono }}>{total.toFixed(1)}g / {proteinTarget}g</span>
+        
+        {/* Total & Price */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0 0", borderTop: "1px solid " + T.g[100], marginTop: 8 }}>
+          <div>
+            <span style={{ fontSize: 12, color: T.g[500] }}>Total protein</span>
+            <span style={{ fontSize: 18, fontWeight: 800, color: T.green, fontFamily: mono, marginLeft: 8 }}>{total}g</span>
+            <span style={{ fontSize: 12, color: T.g[400] }}> / {proteinTarget}g</span>
+          </div>
+          {price > 0 && (
+            <div style={{ textAlign: "right" }}>
+              <span style={{ fontSize: 10, color: T.g[500], display: "block" }}>Est. meal cost</span>
+              <span style={{ fontSize: 16, fontWeight: 800, color: T.brand, fontFamily: mono }}>₹{price}</span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Utilization Picker */}
+      {/* Section 2: V3 Utilization Options */}
       {(Array.isArray(utilizationOptions) ? utilizationOptions : []).length > 0 && (
-        <div style={{ padding: 14, background: T.white, borderRadius: 16, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 10 }}>
-          <p style={{ fontSize: 13, fontWeight: 800, color: T.dark, marginBottom: 4 }}>Pack utilization</p>
-          <p style={{ fontSize: 11, color: T.g[400], marginBottom: 12 }}>What to do with leftover portions?</p>
+        <div style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 12 }}>
+          <p style={{ fontSize: 14, fontWeight: 800, color: T.dark, marginBottom: 4 }}>Pack utilization</p>
+          <p style={{ fontSize: 12, color: T.g[500], marginBottom: 14 }}>What to do with leftover portions?</p>
+          
           {(Array.isArray(utilizationOptions) ? utilizationOptions : []).map((item, idx) => {
             const itemProductName = item?.product_name || item?.name || "Product";
             const itemRemaining = item?.remaining || item?.leftover || "";
+            const itemRemainingAmount = item?.remaining_amount || 0;
             const itemOptions = Array.isArray(item?.options) ? item.options : [];
+            const selectedValue = utilization[itemProductName];
             
             return (
-              <div key={idx} style={{ marginBottom: idx < (Array.isArray(utilizationOptions) ? utilizationOptions : []).length - 1 ? 16 : 0 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: T.dark }}>{itemProductName}</span>
-                  <span style={{ fontSize: 10, fontWeight: 600, color: T.amber, background: T.amberLt, padding: "2px 6px", borderRadius: 99 }}>{itemRemaining}</span>
+              <div key={idx} style={{ marginBottom: idx < utilizationOptions.length - 1 ? 20 : 0, padding: 14, background: T.g[50], borderRadius: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: T.dark }}>{itemProductName}</span>
+                  {itemRemainingAmount > 0 && (
+                    <span style={{ fontSize: 10, fontWeight: 600, color: T.amber, background: T.amberLt, padding: "2px 8px", borderRadius: 99 }}>
+                      {itemRemainingAmount} remaining
+                    </span>
+                  )}
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  {(Array.isArray(itemOptions) ? itemOptions : []).map((opt, i) => {
-                    const optValue = typeof opt === 'string' ? opt : (opt?.value || opt?.label || '');
-                    const optLabel = typeof opt === 'string' ? opt : (opt?.label || opt?.value || '');
-                    const isActive = utilization[itemProductName] === optValue;
+                {itemRemaining && <p style={{ fontSize: 11, color: T.g[500], marginBottom: 10 }}>{itemRemaining}</p>}
+                
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {(Array.isArray(itemOptions) ? itemOptions : []).map((opt, optIdx) => {
+                    const optValue = opt?.value || opt?.label || `option_${optIdx}`;
+                    const optLabel = opt?.label || opt?.value || `Option ${optIdx + 1}`;
+                    const isSelected = selectedValue === optValue;
+                    const days = opt?.days;
+                    const switchProduct = opt?.product;
+                    
                     return (
-                      <button key={i} onClick={() => !locked && setUtilization(p => ({ ...p, [itemProductName]: optValue }))} disabled={locked} style={{
-                        display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10,
-                        border: "2px solid " + (isActive ? T.brand : T.g[200]), background: isActive ? T.brandLt : T.white,
-                        cursor: locked ? "not-allowed" : "pointer", textAlign: "left", opacity: locked ? 0.7 : 1,
-                      }}>
-                        <div style={{ width: 18, height: 18, borderRadius: "50%", border: "2px solid " + (isActive ? T.brand : T.g[300]), display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                          {isActive && <div style={{ width: 10, height: 10, borderRadius: "50%", background: T.brand }} />}
+                      <button 
+                        key={optIdx} 
+                        onClick={() => handleUtilizationSelect(itemProductName, optValue)}
+                        disabled={locked}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 10, padding: "10px 14px",
+                          borderRadius: 10, border: "2px solid " + (isSelected ? T.brand : T.g[200]),
+                          background: isSelected ? T.brandLt : T.white, cursor: locked ? "not-allowed" : "pointer",
+                          textAlign: "left", opacity: locked ? 0.7 : 1, transition: "all .2s"
+                        }}
+                      >
+                        <div style={{ 
+                          width: 18, height: 18, borderRadius: "50%", 
+                          border: "2px solid " + (isSelected ? T.brand : T.g[300]),
+                          background: isSelected ? T.brand : "transparent",
+                          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
+                        }}>
+                          {isSelected && <span style={{ color: "#fff", fontSize: 10 }}>✓</span>}
                         </div>
-                        <span style={{ fontSize: 12, fontWeight: isActive ? 600 : 500, color: isActive ? T.brand : T.g[600] }}>{optLabel}</span>
+                        <div style={{ flex: 1 }}>
+                          <span style={{ fontSize: 13, fontWeight: isSelected ? 700 : 500, color: isSelected ? T.brand : T.dark }}>
+                            {optLabel}
+                          </span>
+                          {days && <span style={{ fontSize: 10, color: T.g[400], marginLeft: 6 }}>({days} days)</span>}
+                          {switchProduct && <span style={{ fontSize: 10, color: T.green, marginLeft: 6 }}>→ {switchProduct}</span>}
+                        </div>
                       </button>
                     );
                   })}
@@ -1308,42 +1387,104 @@ const PortionConfirmCard = ({ data, onConfirm }) => {
         </div>
       )}
 
-      <Btn onClick={handleConfirm} full disabled={locked} loading={locked} style={{ marginTop: 16 }}>
-        {locked ? "Locking..." : `Lock ${mealLabel} ✓`}
+      {/* Lock Button */}
+      <Btn 
+        onClick={handleConfirm} 
+        full 
+        disabled={((Array.isArray(utilizationOptions) ? utilizationOptions : []).length > 0 && !allUtilizationSelected) || locked} 
+        loading={locked} 
+        style={{ marginTop: 14 }}
+      >
+        {locked ? "Locking..." : `Lock ${mealLabel} →`}
       </Btn>
+      
+      {(Array.isArray(utilizationOptions) ? utilizationOptions : []).length > 0 && !allUtilizationSelected && !locked && (
+        <p style={{ fontSize: 11, color: T.g[400], textAlign: "center", marginTop: 8 }}>
+          Select utilization for all products to continue
+        </p>
+      )}
     </div>
   );
 };
 
+// V3: Meal Confirmed Badge with Edit button + running cost display
 const MealBadge = ({ data, onEdit }) => {
-  // Defensive: handle alternate field names from backend
-  const mealLabel = data.meal_label || data.meal || "Meal";
-  const totalProtein = data.total_protein || data.protein || 0;
-  const runningPrice = data.running_price || data.price || data.total_price || 0;
+  const mealLabel = data?.meal_label || data?.meal || "Meal";
+  const totalProtein = data?.total_protein || data?.protein || 0;
+  const runningPriceDaily = data?.running_price_daily || data?.running_price || data?.price || 0;
+  const runningPriceWeekly = data?.running_price_weekly || runningPriceDaily * 7;
+  
+  // V3: days_covered info
+  const daysCovered = data?.days_covered || [];
+  const products = data?.products || [];
   
   return (
-    <div className="si" style={{ padding: "12px 16px", background: T.greenLt, borderRadius: 14, border: "1px solid " + T.green + "20", marginTop: 8 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 28, height: 28, borderRadius: "50%", background: T.green, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ color: "#fff", fontSize: 13 }}>✓</span>
+    <div className="si" style={{ marginTop: 8 }}>
+      {/* Meal Confirmed Card */}
+      <div style={{ padding: "14px 16px", background: T.greenLt, borderRadius: 14, border: "1px solid " + T.green + "30" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 32, height: 32, borderRadius: "50%", background: T.green, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ color: "#fff", fontSize: 14 }}>✓</span>
+            </div>
+            <div>
+              <span style={{ fontSize: 14, fontWeight: 800, color: T.green }}>{mealLabel} locked</span>
+              <span style={{ fontSize: 12, color: T.g[600], display: "block" }}>{Math.round(totalProtein * 10) / 10}g protein</span>
+            </div>
           </div>
-          <div>
-            <span style={{ fontSize: 13, fontWeight: 700, color: T.green }}>{mealLabel} locked</span>
-            <span style={{ fontSize: 11, color: T.g[500], display: "block" }}>{Math.round(totalProtein * 10) / 10}g protein</span>
-          </div>
+          
+          {/* V3: Edit button */}
+          {onEdit && (
+            <button 
+              onClick={() => onEdit({ edit_meal: mealLabel.toLowerCase() })}
+              style={{ 
+                fontSize: 12, fontWeight: 600, color: T.brand, 
+                background: T.white, border: "1px solid " + T.brand + "40", 
+                borderRadius: 8, padding: "6px 12px", cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 4
+              }}
+            >
+              ✏️ Edit
+            </button>
+          )}
         </div>
-        <span style={{ fontSize: 15, fontWeight: 800, color: T.dark, fontFamily: mono }}>₹{runningPrice}</span>
+        
+        {/* V3: Show products and days covered */}
+        {(Array.isArray(daysCovered) ? daysCovered : []).length > 0 && (
+          <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid " + T.green + "20" }}>
+            {daysCovered.map((item, i) => (
+              <p key={i} style={{ fontSize: 11, color: T.g[600], marginBottom: 2 }}>
+                • {item?.product_name} <span style={{ color: T.g[400] }}>({item?.days} day{item?.days !== 1 ? 's' : ''})</span>
+              </p>
+            ))}
+          </div>
+        )}
+        
+        {(Array.isArray(daysCovered) ? daysCovered : []).length === 0 && (Array.isArray(products) ? products : []).length > 0 && (
+          <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid " + T.green + "20" }}>
+            {products.map((p, i) => (
+              <p key={i} style={{ fontSize: 11, color: T.g[600], marginBottom: 2 }}>• {p}</p>
+            ))}
+          </div>
+        )}
       </div>
-      {/* FIX 5: Edit button to change locked meal */}
-      {onEdit && (
-        <button 
-          onClick={() => onEdit(`I want to change my ${mealLabel.toLowerCase()}`)}
-          style={{ fontSize: 11, color: T.g[400], background: "none", border: "none", cursor: "pointer", textDecoration: "underline", marginTop: 8, padding: 0 }}
-        >
-          Edit {mealLabel.toLowerCase()}
-        </button>
-      )}
+      
+      {/* V3: Running Cost Banner */}
+      <div style={{ 
+        marginTop: 8, padding: "10px 14px", 
+        background: T.dark, borderRadius: 10,
+        display: "flex", justifyContent: "space-between", alignItems: "center"
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 12 }}>📊</span>
+          <span style={{ fontSize: 11, color: T.g[400] }}>Daily so far:</span>
+          <span style={{ fontSize: 13, fontWeight: 800, color: T.white, fontFamily: mono }}>₹{runningPriceDaily}</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 11, color: T.g[400] }}>Est. weekly:</span>
+          <span style={{ fontSize: 13, fontWeight: 800, color: T.green, fontFamily: mono }}>₹{runningPriceWeekly}</span>
+        </div>
+      </div>
     </div>
   );
 };
