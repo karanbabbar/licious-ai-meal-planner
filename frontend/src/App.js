@@ -1709,7 +1709,8 @@ const Consolidation = ({ data, onAction }) => {
 };
 
 // V3: Weekly Summary Component - Detailed 7-day view with accordion + editable cart
-const WeeklySummary = ({ data, onAction }) => {
+// BUG 6, 7 FIX: Weekly Summary Component - proper nested products rendering + CartEditor
+const WeeklySummary = ({ data, onAction, productsCatalog, onOpenCartEditor }) => {
   const [activeTab, setActiveTab] = useState("plan");
   const [expandedDay, setExpandedDay] = useState(1);
   const [showEditMenu, setShowEditMenu] = useState(false);
@@ -1720,6 +1721,7 @@ const WeeklySummary = ({ data, onAction }) => {
   const dailyCost = data?.daily_cost || 0;
   const totalCartPrice = data?.total_cart_price || 0;
   const distribution = data?.distribution || {};
+  const weeklyText = data?.weekly_text || []; // BUG 6: Fallback text
   
   // DEFENSIVE: Ensure arrays
   let weeklyPlan = data?.weekly_plan || [];
@@ -1732,7 +1734,7 @@ const WeeklySummary = ({ data, onAction }) => {
     cart = typeof cart === 'object' ? Object.values(cart) : [];
   }
   
-  const mealIcons = { Breakfast: "🌅", Lunch: "☀️", Dinner: "🌙" };
+  const mealIcons = { Breakfast: "🌅", Lunch: "☀️", Dinner: "🌙", breakfast: "🌅", lunch: "☀️", dinner: "🌙" };
   
   const handleConfirm = () => {
     if (isSubmitting) return;
@@ -1744,6 +1746,13 @@ const WeeklySummary = ({ data, onAction }) => {
     if (isSubmitting) return;
     setShowEditMenu(false);
     onAction({ edit_meal: mealLabel.toLowerCase() });
+  };
+  
+  // BUG 7: Open CartEditor for a specific cart item
+  const handleOpenCartEditor = (item) => {
+    if (onOpenCartEditor) {
+      onOpenCartEditor(item);
+    }
   };
   
   return (
@@ -1758,7 +1767,7 @@ const WeeklySummary = ({ data, onAction }) => {
         </button>
       </div>
       
-      {/* TAB 1: 7-Day Plan */}
+      {/* TAB 1: BUG 6 FIX - 7-Day Plan with proper nested product rendering */}
       {activeTab === "plan" && (
         <div style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m }}>
           <div style={{ marginBottom: 14 }}>
@@ -1768,11 +1777,14 @@ const WeeklySummary = ({ data, onAction }) => {
             )}
           </div>
           
-          {/* Accordion for each day */}
+          {/* BUG 6 FIX: Accordion for each day with proper nested structure */}
           {(Array.isArray(weeklyPlan) ? weeklyPlan : []).map((day, i) => {
             const dayNum = day?.day || i + 1;
             const isExpanded = expandedDay === dayNum;
             const meals = day?.meals || [];
+            
+            // BUG 6: For days 2-7, show "Same as Day 1" if collapsed
+            const isSameAsDay1 = dayNum > 1 && !isExpanded;
             
             return (
               <div key={i} style={{ borderBottom: i < weeklyPlan.length - 1 ? "1px solid " + T.g[100] : "none" }}>
@@ -1780,30 +1792,46 @@ const WeeklySummary = ({ data, onAction }) => {
                   onClick={() => setExpandedDay(isExpanded ? null : dayNum)}
                   style={{ width: "100%", padding: "12px 0", display: "flex", justifyContent: "space-between", alignItems: "center", background: "transparent", border: "none", cursor: "pointer" }}
                 >
-                  <span style={{ fontSize: 14, fontWeight: 700, color: T.dark }}>Day {dayNum}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: T.dark }}>Day {dayNum}</span>
+                    {isSameAsDay1 && <span style={{ fontSize: 11, color: T.g[400] }}>(Same as Day 1)</span>}
+                  </div>
                   <span style={{ fontSize: 12, color: T.g[400] }}>{isExpanded ? "▲" : "▼"}</span>
                 </button>
                 
+                {/* BUG 6 FIX: Expanded view with meals and nested products */}
                 {isExpanded && (
                   <div style={{ paddingBottom: 12 }}>
                     {(Array.isArray(meals) ? meals : []).map((meal, mi) => {
-                      const mealLabel = meal?.meal_label || "Meal";
+                      const mealLabel = meal?.meal_label || meal?.label || "Meal";
                       const mealProducts = meal?.products || [];
                       const mealProtein = meal?.total_protein_g || 0;
                       
                       return (
-                        <div key={mi} style={{ padding: "8px 12px", marginBottom: 6, background: T.g[50], borderRadius: 10 }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                            <span style={{ fontSize: 12, fontWeight: 700, color: T.dark }}>
+                        <div key={mi} style={{ padding: "10px 12px", marginBottom: 6, background: T.g[50], borderRadius: 10 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: T.dark }}>
                               {mealIcons[mealLabel] || "🍽"} {mealLabel}
                             </span>
-                            <span style={{ fontSize: 11, fontWeight: 600, color: T.green }}>{Math.round(mealProtein * 10) / 10}g</span>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: T.green, fontFamily: mono }}>{Math.round(mealProtein * 10) / 10}g</span>
                           </div>
-                          {(Array.isArray(mealProducts) ? mealProducts : []).map((p, pi) => (
-                            <p key={pi} style={{ fontSize: 11, color: T.g[600], marginLeft: 22, marginBottom: 2 }}>
-                              • {p?.product_name || p} {p?.quantity && `(${p.quantity})`}
-                            </p>
-                          ))}
+                          {/* BUG 6 FIX: Render nested products with quantity */}
+                          {(Array.isArray(mealProducts) ? mealProducts : []).map((p, pi) => {
+                            const productName = typeof p === 'string' ? p : (p?.product_name || p?.name || 'Product');
+                            const quantity = typeof p === 'object' ? (p?.quantity || '') : '';
+                            const proteinG = typeof p === 'object' ? (p?.protein_g || 0) : 0;
+                            
+                            return (
+                              <div key={pi} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginLeft: 24, marginBottom: 4 }}>
+                                <span style={{ fontSize: 12, color: T.g[600] }}>
+                                  • {productName} {quantity && `(${quantity})`}
+                                </span>
+                                {proteinG > 0 && (
+                                  <span style={{ fontSize: 10, color: T.g[500] }}>{Math.round(proteinG * 10) / 10}g</span>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       );
                     })}
@@ -1812,10 +1840,19 @@ const WeeklySummary = ({ data, onAction }) => {
               </div>
             );
           })}
+          
+          {/* BUG 6 FIX: Fallback to weekly_text if structured data fails */}
+          {weeklyPlan.length === 0 && (Array.isArray(weeklyText) ? weeklyText : []).length > 0 && (
+            <div style={{ padding: "10px 0" }}>
+              {weeklyText.map((text, i) => (
+                <p key={i} style={{ fontSize: 12, color: T.g[600], marginBottom: 6, whiteSpace: "pre-wrap" }}>{text}</p>
+              ))}
+            </div>
+          )}
         </div>
       )}
       
-      {/* TAB 2: Shopping Cart */}
+      {/* TAB 2: Shopping Cart with BUG 7 FIX - Change buttons */}
       {activeTab === "cart" && (
         <div style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
@@ -1837,10 +1874,10 @@ const WeeklySummary = ({ data, onAction }) => {
                 <p style={{ fontSize: 11, color: T.g[500], marginBottom: 4 }}>
                   {item?.pack_size_label || ''} × {item?.packs_needed || 1} = <span style={{ color: T.brand, fontWeight: 700 }}>₹{item?.total_price || item?.price || 0}</span>
                 </p>
-                {/* V3: Change button for cart items */}
+                {/* BUG 7 FIX: Change button opens CartEditor */}
                 <button 
-                  onClick={() => handleEditMeal("breakfast")} // Simplified - backend handles routing
-                  style={{ fontSize: 10, fontWeight: 600, color: T.g[500], background: T.g[100], border: "none", borderRadius: 4, padding: "3px 8px", cursor: "pointer" }}
+                  onClick={() => handleOpenCartEditor(item)}
+                  style={{ fontSize: 10, fontWeight: 600, color: T.brand, background: T.brandLt, border: "none", borderRadius: 4, padding: "4px 10px", cursor: "pointer" }}
                 >
                   Change
                 </button>
@@ -1874,6 +1911,119 @@ const WeeklySummary = ({ data, onAction }) => {
               ))}
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// BUG 7 FIX: CartEditor Overlay Component
+const CartEditor = ({ item, productsCatalog, onClose, onConfirm }) => {
+  const [selectedProduct, setSelectedProduct] = useState(item?.product_name || '');
+  const [quantity, setQuantity] = useState(item?.packs_needed || 1);
+  
+  // Filter products by matching category (and optionally cut_type)
+  const currentCategory = (item?.category || '').toLowerCase();
+  const currentCutType = item?.cut_type || '';
+  
+  const alternativeProducts = (Array.isArray(productsCatalog) ? productsCatalog : []).filter(p => {
+    const productCategory = (p?.category || '').toLowerCase();
+    const productCutType = p?.cut_type || '';
+    
+    // Match by category first
+    if (productCategory !== currentCategory) return false;
+    
+    // If current item has a cut_type, also match by cut_type for tighter filtering
+    if (currentCutType && productCutType && productCutType !== currentCutType) return false;
+    
+    return true;
+  });
+  
+  const handleQuantityChange = (delta) => {
+    setQuantity(prev => Math.max(1, prev + delta));
+  };
+  
+  const handleConfirm = () => {
+    const newProduct = alternativeProducts.find(p => p.product_name === selectedProduct) || item;
+    onConfirm({
+      ...item,
+      product_name: selectedProduct,
+      packs_needed: quantity,
+      price: newProduct?.price || item?.price,
+      total_price: (newProduct?.price || item?.price) * quantity,
+      image_url: newProduct?.image_url || item?.image_url,
+      pack_size_label: newProduct?.pack_size_label || item?.pack_size_label
+    });
+  };
+  
+  const categoryIcons = { chicken: '🍗', eggs: '🥚', fish: '🐟', mutton: '🍖' };
+  const icon = categoryIcons[currentCategory] || '🥩';
+  
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+      <div style={{ width: "100%", maxWidth: 480, background: T.white, borderRadius: "24px 24px 0 0", padding: "20px 16px 32px", maxHeight: "80vh", overflow: "auto" }}>
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <p style={{ fontSize: 16, fontWeight: 800, color: T.dark }}>Change: {item?.product_name}</p>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, color: T.g[400], cursor: "pointer" }}>×</button>
+        </div>
+        
+        {/* Current Selection */}
+        <div style={{ padding: 12, background: T.brandLt, borderRadius: 12, border: "2px solid " + T.brand, marginBottom: 16 }}>
+          <p style={{ fontSize: 10, fontWeight: 700, color: T.brand, textTransform: "uppercase", marginBottom: 6 }}>Currently selected</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 24 }}>{icon}</span>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 14, fontWeight: 700, color: T.dark }}>{selectedProduct}</p>
+              <p style={{ fontSize: 12, color: T.g[500] }}>₹{item?.price || 0} | {quantity} packs in cart</p>
+            </div>
+            <span style={{ fontSize: 16, color: T.brand }}>✓</span>
+          </div>
+        </div>
+        
+        {/* Alternative Options */}
+        {alternativeProducts.length > 1 && (
+          <>
+            <p style={{ fontSize: 12, fontWeight: 700, color: T.g[500], marginBottom: 10 }}>Other options in {currentCategory}:</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+              {alternativeProducts.filter(p => p.product_name !== item?.product_name).map((p, i) => {
+                const isSelected = selectedProduct === p.product_name;
+                return (
+                  <button 
+                    key={i}
+                    onClick={() => setSelectedProduct(p.product_name)}
+                    style={{ 
+                      display: "flex", alignItems: "center", gap: 10, padding: "12px 14px",
+                      borderRadius: 12, border: "2px solid " + (isSelected ? T.brand : T.g[200]),
+                      background: isSelected ? T.brandLt : T.white, cursor: "pointer", textAlign: "left"
+                    }}
+                  >
+                    <span style={{ fontSize: 20 }}>{icon}</span>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: T.dark }}>{p.product_name}</p>
+                      <p style={{ fontSize: 11, color: T.g[500] }}>₹{p.price} | {p.protein_per_100g}g protein/100g</p>
+                    </div>
+                    {isSelected && <span style={{ color: T.brand }}>✓</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+        
+        {/* Quantity Picker */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, marginBottom: 20 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: T.g[600] }}>Quantity:</span>
+          <button onClick={() => handleQuantityChange(-1)} style={{ width: 36, height: 36, borderRadius: "50%", border: "2px solid " + T.g[200], background: T.white, fontSize: 18, cursor: "pointer" }}>−</button>
+          <span style={{ fontSize: 18, fontWeight: 800, color: T.dark, minWidth: 40, textAlign: "center" }}>{quantity}</span>
+          <button onClick={() => handleQuantityChange(1)} style={{ width: 36, height: 36, borderRadius: "50%", border: "2px solid " + T.g[200], background: T.white, fontSize: 18, cursor: "pointer" }}>+</button>
+          <span style={{ fontSize: 12, color: T.g[500] }}>packs</span>
+        </div>
+        
+        {/* Action Buttons */}
+        <div style={{ display: "flex", gap: 10 }}>
+          <Btn onClick={onClose} v="secondary" full style={{ flex: 1 }}>Cancel</Btn>
+          <Btn onClick={handleConfirm} full style={{ flex: 1 }}>Confirm Change</Btn>
         </div>
       </div>
     </div>
