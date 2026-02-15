@@ -1253,7 +1253,8 @@ const ProductCardGrid = ({ data, onSelect }) => {
 };
 
 // V3: Portion Confirm Component - portions summary + utilization options per product
-const PortionConfirmCard = ({ data, onConfirm }) => {
+// BUG 4, 5 FIX: Portion Confirm Component - always show utilization if present + Change Products button
+const PortionConfirmCard = ({ data, onConfirm, onChangeProducts }) => {
   const [utilization, setUtilization] = useState({});
   const [locked, setLocked] = useState(false);
   
@@ -1272,6 +1273,7 @@ const PortionConfirmCard = ({ data, onConfirm }) => {
     }
   }
   
+  // BUG 4 FIX: ALWAYS show utilization if utilization_options has entries - don't filter by meal
   // DEFENSIVE: Ensure utilizationOptions is always an array
   let utilizationOptions = data?.utilization_options || data?.leftover_options || [];
   if (!Array.isArray(utilizationOptions)) {
@@ -1285,10 +1287,12 @@ const PortionConfirmCard = ({ data, onConfirm }) => {
   const totalProtein = data?.total_protein || (Array.isArray(portions) ? portions : []).reduce((s, p) => s + (p?.protein_g || p?.protein || 0), 0);
   const total = Math.round(totalProtein * 10) / 10;
   
-  // V3: Check if all products with utilization options have been selected
-  const allUtilizationSelected = (Array.isArray(utilizationOptions) ? utilizationOptions : []).every(
-    item => utilization[item?.product_name || item?.name]
-  );
+  // BUG 4 FIX: Check if all products with utilization options have been selected
+  // Don't skip for dinner - backend sends appropriate options for each meal
+  const allUtilizationSelected = (Array.isArray(utilizationOptions) ? utilizationOptions : []).length === 0 || 
+    (Array.isArray(utilizationOptions) ? utilizationOptions : []).every(
+      item => utilization[item?.product_name || item?.name]
+    );
   
   const handleUtilizationSelect = (productName, value) => {
     if (locked) return;
@@ -1298,18 +1302,41 @@ const PortionConfirmCard = ({ data, onConfirm }) => {
   const handleConfirm = () => {
     if (locked) return;
     // V3: Check if all utilization options are selected
-    if ((Array.isArray(utilizationOptions) ? utilizationOptions : []).length > 0 && !allUtilizationSelected) return;
+    if (!allUtilizationSelected) return;
     setLocked(true);
     // V3: Send utilization map
     onConfirm({ utilization: utilization });
+  };
+  
+  // BUG 5 FIX: Handle Change Products button
+  const handleChangeProducts = () => {
+    if (locked) return;
+    // Send edit_meal for current meal
+    onChangeProducts({ edit_meal: mealLabel.toLowerCase() });
   };
   
   const categoryIcons = { chicken: '🍗', eggs: '🥚', fish: '🐟', mutton: '🍖' };
   
   return (
     <div className="si">
+      {/* BUG 5 FIX: Change Products button at top */}
+      <button 
+        onClick={handleChangeProducts}
+        disabled={locked}
+        style={{ 
+          display: "flex", alignItems: "center", gap: 6, 
+          padding: "8px 12px", marginTop: 8, marginBottom: 8,
+          background: "transparent", border: "none", 
+          fontSize: 13, fontWeight: 600, color: T.brand, 
+          cursor: locked ? "not-allowed" : "pointer",
+          opacity: locked ? 0.5 : 1
+        }}
+      >
+        ← Change Products
+      </button>
+      
       {/* Section 1: Portions Summary */}
-      <div style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
+      <div style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: 18 }}>{mealLabel === "Breakfast" ? "🌅" : mealLabel === "Lunch" ? "☀️" : "🌙"}</span>
@@ -1374,7 +1401,7 @@ const PortionConfirmCard = ({ data, onConfirm }) => {
         </div>
       </div>
 
-      {/* Section 2: V3 Utilization Options */}
+      {/* BUG 4 FIX: Section 2: Utilization Options - ALWAYS show if present, even for dinner */}
       {(Array.isArray(utilizationOptions) ? utilizationOptions : []).length > 0 && (
         <div style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 12 }}>
           <p style={{ fontSize: 14, fontWeight: 800, color: T.dark, marginBottom: 4 }}>Pack utilization</p>
@@ -1448,7 +1475,7 @@ const PortionConfirmCard = ({ data, onConfirm }) => {
       <Btn 
         onClick={handleConfirm} 
         full 
-        disabled={((Array.isArray(utilizationOptions) ? utilizationOptions : []).length > 0 && !allUtilizationSelected) || locked} 
+        disabled={!allUtilizationSelected || locked} 
         loading={locked} 
         style={{ marginTop: 14 }}
       >
