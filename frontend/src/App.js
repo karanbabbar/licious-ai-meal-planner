@@ -2159,6 +2159,14 @@ const MealPlanningWizard = ({ sessionId, onComplete, onRestart }) => {
       }
       setMsgs(p => [...p, { role: "bot", text: data.message || raw, data }]);
       
+      // BUG 7 FIX: Store products catalog from first product_select response
+      if (data.ui_type === 'product_select' && data.ui_data?.products && productsCatalog.length === 0) {
+        const products = data.ui_data.products;
+        if (Array.isArray(products) && products.length > 0) {
+          setProductsCatalog(products);
+        }
+      }
+      
       // Check for order_confirmed ui_type - this marks the end of the flow
       if (data.ui_type === 'order_confirmed') {
         setDone(true);
