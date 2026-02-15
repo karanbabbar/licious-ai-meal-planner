@@ -2,89 +2,125 @@
 The user wants to build a React mobile-first web app called Protein Planner v2. The app is a guided wizard to help users calculate their protein needs, plan meals with Licious products, and pre-order supplies. The entire application must be contained within a single  file.
 
 **PRODUCT REQUIREMENTS:**
-The backend has been updated to a deterministic state engine (v3). The frontend must be updated to match the new comprehensive specification provided by the user. The core requirements are:
+The backend has been updated to a deterministic state engine (v3). The frontend must be updated to match a new comprehensive specification. The core requirements are:
 -   **Single Endpoint:** The entire meal planning flow is driven by the  endpoint.
 -   **State-Driven UI:** All UI is rendered based on a  field from the API response.
--   **New UI Components:** Implement new components for  and .
--   **Overhauled Components:** Update all existing meal planning components (, , , , , , , , , ) to match the new detailed V3 specifications for UI, data structures, and UX.
--   **Structured JSON Payloads:** All user interactions must send a structured JSON object in the  field of the API request, as defined in the V3 spec.
+-   **New UI Components:** Implement , , .
+-   **Overhauled Components:** Update all existing meal planning components to match the new detailed V3 specifications for UI, data structures, and UX.
+-   **Structured JSON Payloads:** All user interactions must send a structured JSON object in the  field of the API request.
 -   **Key UX Changes:**
-    -    must group products by their source category (e.g., Eggs, Chicken).
-    -    must include complex logic for pack utilization choices (same meal multi-day, use for other meal, switch to smaller pack).
+    -    must group products by source category.
+    -    must include complex logic for pack utilization choices.
     -   A persistent running cost banner must be visible during meal planning.
-    -   Extensive Edit functionality must be available at , , and  stages, allowing the user to go back and change a specific meal.
+    -   Extensive Edit functionality is required at multiple stages.
 -   **No File Refactoring:** The application must remain a single monolithic  component.
+-   **Bug Fixes (Round 1):** A list of 8 specific bugs related to the V3 implementation were identified and fixed.
+-   **Bug Fixes (Round 2):** A new list of 4 UI/UX issues has been provided for the next round of fixes.
 
 **User's preferred language**: English
 
 **what currently exists?**
-The application is a single, monolithic React component (). It contains the full onboarding and meal planning wizard. The agent has recently completed two major tasks:
-1.  A comprehensive defensive programming audit, adding guards for , , and property access to prevent crashes from inconsistent API data. This was verified by the testing agent.
-2.  A refactor to support the v2 state engine, which involved merging two API endpoints, removing old components, and switching user inputs from plain text to a structured JSON format.
-
-The current code is stable but is now outdated, as the backend has been upgraded to v3, which requires a complete overhaul of the meal planning flow as specified in the last user message.
+The application is a single, monolithic React component () that implements the entire onboarding and meal planning wizard. The agent has completed a full frontend overhaul to support the State Engine v3 backend, followed by a round of 8 bug fixes based on user feedback (). The code has been built and tested by the testing agent, confirming the implementation of the V3 spec and the subsequent fixes. However, a new list of 4 UX improvements and bug fixes has just been provided by the user.
 
 **Last working item**:
--   **Last item agent was working:** The agent was preparing to implement the Frontend Updates for State Engine v3 — Comprehensive Spec. This is a major feature overhaul. The agent acknowledged the new spec and viewed the  file to assess the scope of changes required. No code has been written for the V3 spec yet.
+-   **Last item agent was working:** The agent had just finished implementing a round of 8 bug fixes and had them verified by the testing agent. The user then provided a new list of 4 quick fixes from their own testing round. The agent has acknowledged this new list but has not started implementation.
 -   **Status:** NOT STARTED
--   **Agent Testing Done:** N
--   **Which testing method agent to use?** frontend testing agent. After implementation, a full end-to-end test of the new V3 flow is required, from  to , including all Edit paths.
--   **User Testing Done:** N
+-   **Agent Testing Done:** N (for the new list of fixes)
+-   **Which testing method agent to use?** frontend testing agent. After implementing the 4 fixes, a full end-to-end test is required, specifically checking the edit flows and the new weekly plan UI.
+-   **User Testing Done:** Y (User provided the new list of issues after their own testing)
 
 **All Pending/In progress Issue list**:
--   **Issue 1:** (P0) The entire application logic is incompatible with the new State Engine v3 backend.
+-   **Issue 1:** (P0) Edit functionality needs to be available earlier in the flow, on the  screen.
+-   **Issue 2:** (P0) Edit buttons on locked meals are still not triggering the flow correctly.
+-   **Issue 3:** (P1) The  component must allow swapping products, not just changing quantities.
+-   **Issue 4:** (P1) The  view needs to be redesigned into a horizontal scrollable calendar.
 
 **Issues Detail:**
--   **Issue 1: Incompatibility with State Engine v3**
-    -   **Attempted fixes:** The agent has reviewed the V3 specification and viewed the existing  file. No implementation has started.
+-   **Issue 1: Edit during meal prep (not just at the end)**
+    -   **Attempted fixes:** None. This is a new requirement.
     -   **Next debug checklist:**
-        1.  Systematically create and update components as per the Frontend Updates for State Engine v3 — Comprehensive Spec.
-        2.  Start by implementing the new  and  components.
-        3.  Refactor existing components one-by-one, ensuring they handle the new  structures and send the correct structured JSON payloads.
-        4.  Pay close attention to the new UX requirements for  (group by source),  (utilization), and the Edit flows.
-    -   **Why fix this issue and what will be achieved with the fix?** To make the frontend functional with the new backend. This will deliver the complete, intended user experience.
+        1.  Locate the  component in .
+        2.  Add a button labeled ← Change Products.
+        3.  Wire this button's  handler to send the message  to the backend, similar to how the existing Change Products button works.
+    -   **Why fix this issue and what will be achieved with the fix?** To allow users to correct their product choices before locking in a meal, improving user experience.
     -   **Status:** NOT STARTED
     -   **Is recurring issue?** N
     -   **Should Test frontend/backend/both after fix?** frontend
-    -   **Blocked on other issue:** None. This is the sole priority.
+    -   **Blocked on other issue:** None.
+
+-   **Issue 2: Edit buttons not triggering flow correctly**
+    -   **Attempted fixes:** The Edit button functionality was previously implemented, but it seems to be failing silently.
+    -   **Next debug checklist:**
+        1.  In , find the  handlers for the Edit buttons in , , and .
+        2.  Verify that the  function is being called with the correct payload (e.g., ).
+        3.  The agent who implemented this assumed the backend would return a new  and replace the screen. This needs to be confirmed. The next agent should use browser developer tools (or similar logging) to inspect the network call and the exact API response when an Edit button is clicked.
+        4.  Ensure the component correctly processes the response from the API (which should be a  screen) and re-renders the UI accordingly.
+    -   **Why fix this issue and what will be achieved with the fix?** The Edit feature is a core part of the V3 spec and is currently broken, blocking users from correcting their meal plans.
+    -   **Status:** NOT STARTED
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** frontend
+    -   **Blocked on other issue:** None.
+
+-   **Issue 3: Cart editing — need product change, not just quantity**
+    -   **Attempted fixes:** The  was built to only manage quantity.
+    -   **Next debug checklist:**
+        1.  Locate the  component in .
+        2.  Redesign its UI to show other available products from the same category.
+        3.  Use the  state variable (which stores products from the first  call) to source these alternative products.
+        4.  Filter  to find items with the same  (and optionally ) as the item being edited.
+        5.  Implement the  logic for the new product list, so that selecting a new product updates the item in the local cart state.
+    -   **Why fix this issue and what will be achieved with the fix?** To make the cart editing feature genuinely useful, allowing users to swap products directly from the cart summary.
+    -   **Status:** NOT STARTED
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** frontend
+    -   **Blocked on other issue:** None.
+
+-   **Issue 4: Redesign Weekly plan view**
+    -   **Attempted fixes:** The current implementation is a vertical accordion.
+    -   **Next debug checklist:**
+        1.  Locate the  component in .
+        2.  Within the 7-Day Plan tab, replace the accordion structure.
+        3.  Implement a main container with  and a flexbox layout.
+        4.  Inside, map over the days of the week to create individual day cards.
+        5.  Style each day card to display the 3 meals (Breakfast, Lunch, Dinner) and their selected products.
+    -   **Why fix this issue and what will be achieved with the fix?** To improve the scannability and mobile-friendliness of the final meal plan summary.
+    -   **Status:** NOT STARTED
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** frontend
+    -   **Blocked on other issue:** None.
 
 **In progress Task List**:
 None.
 
 **Upcoming and Future Tasks**
-- **P0: Implement Frontend for State Engine v3**
-    - Implement all new UI components (, ).
-    - Overhaul all existing meal planning components to match the V3 spec.
-    - Ensure all user interactions send the correct structured JSON payloads.
-    - Implement the Edit functionality for meals at the , , and  stages.
-- **P1: Deferred Functionality**
-    - Implement the Remove button functionality in the final cart view (currently deferred in the spec).
+-   **P1: Implement Remove button functionality in the final cart view** (deferred from the original V3 spec).
 
 **Completed work in this session**
--   **Defensive Programming Audit (RESOLVED):** Systematically guarded all , , and  calls in . This fixed all  crashes and was verified by the testing agent.
--   **State Engine v2 Refactor (COMPLETED):**
-    -   Merged Agent 2 () and Agent 3 () flows into a single endpoint.
-    -   Updated user interactions to send structured JSON payloads (v2 format).
-    -   Removed the old  and related components.
--   **Onboarding Transition Fix (COMPLETED):** Fixed the flow from onboarding to meal planning by sending the correct initial message ().
+-   **State Engine V3 Implementation (COMPLETED):**
+    -   Created all new components as per the spec: , , .
+    -   Overhauled all existing meal planning components (, , , , , , , etc.) to match V3 data structures and UX.
+    -   Implemented key UX changes like product grouping, portion utilization options, and the persistent running cost banner.
+-   **Bug Fixes Round 1 (COMPLETED):**
+    -   Fixed 8 specific bugs detailed in , including issues with protein calculation, product display, portion utilization, weekly summary rendering, and the CartEditor.
+    -   This work was verified by the testing agent.
 
 **Earlier issues found/mentioned but not fixed**
-None. The new V3 specification supersedes all previous minor bugs and unverified fixes.
+The 4 new issues listed in **All Pending/In progress Issue list** are the current priority.
 
 **Known issue recurrence from previous fork**
 -   **Issue recurrence in previous fork:**  crash.
 -   **Recurrence count:** 3
--   **Status:** RESOLVED. A full audit was performed, and all instances were guarded with . This was verified by the testing agent in .
+-   **Status:** RESOLVED. A full audit was performed, and the testing agent verified that 51  guards are in place. This issue has not recurred.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
 -   **Framework/Library:** React 18
--   **State Management:** React Hooks (, )
+-   **State Management:** React Hooks (, ) within a single component.
 -   **Styling:** Inline CSS-in-JS style objects.
 -   **Architecture:** Single Page Application (SPA) in a single monolithic component ().
--   **State-Driven UI:** The UI is rendered dynamically based on a  field received from the backend API.
+-   **State-Driven UI:** UI is rendered dynamically based on a  field from the backend.
 -   **Defensive Programming:** The app contains robust checks for data types and missing properties.
 
 **key DB schema**
@@ -95,54 +131,58 @@ None.
 
 **All files of reference**
 -   : The only file containing all application code.
--   : Contains product requirements.
--   : Test report from the last testing agent run, confirming the defensive programming fixes.
+-   : Contains product requirements and a changelog.
+-   : The detailed specification for the V3 frontend implementation.
+-   : The specification for the first round of bug fixes.
 
 **Areas that need refactoring**:
-The user has explicitly forbidden splitting  into multiple files. The required V3 implementation will serve as a major internal refactor of the components within .
+The user has explicitly forbidden splitting  into multiple files.
 
 **key api endpoints**
 -   **Onboarding:** 
 -   **Meal Planning (Primary):** 
 
 **Critical Info for New Agent**
--   **Your ONLY task is to implement the Frontend Updates for State Engine v3 — Comprehensive Spec** provided in the last user message. This is a complete overhaul.
--   The previous implementation is now obsolete. Follow the new spec meticulously for every component, data structure, and user interaction.
--   Pay special attention to the new UX requirements: grouping products by source in , the utilization options in , and the Edit flows.
--   All API calls to  must now send a structured JSON payload in the  field, as defined in the V3 spec.
--   Do not attempt to split  into smaller files.
+-   **Your primary task is to implement the 4 new quick fixes** from the user's last message. Address them in the priority order listed above.
+-   The backend is an external n8n webhook that is not under your control. It can sometimes be slow or return errors. The frontend should handle this gracefully.
+-   All required code changes will be within the single  file.
+-   Refer to the user's instructions for **Bug 7 (CartEditor)**: you must use the product catalog stored in state from the initial  API call to populate the product-swapping UI.
+-   The Edit button bug has been recurring. Pay close attention to the network request and response to debug it effectively.
 
 **documents and test reports created in this job**
 -   
 -   
+-   
+-    (verified V3 implementation)
+-    (verified Round 1 bug fixes)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User (LATEST):** Provided a comprehensive Frontend Updates for State Engine v3 — Comprehensive Spec. This is the new blueprint for the application. **Status: Pending Implementation.**
-2.  **Agent:** Confirmed the fix for the onboarding-to-meal-planning transition was complete. **Status: Completed.**
-3.  **User:** Reported that the transition from onboarding to meal planning was stuck. **Status: Resolved.**
-4.  **Agent:** Finished the v2 refactor task. **Status: Completed.**
-5.  **User:** Provided the v2 refactor requirements (merge agents, use structured JSON). **Status: Implemented.**
-6.  **Agent:** Reported that the testing agent verified all defensive programming fixes were working correctly. **Status: Completed.**
-7.  **Agent:** Called the testing agent to validate the  crash fixes. **Status: Completed.**
-8.  **User:** Provided more detail on defensive programming requirements (, , etc.). **Status: Implemented.**
-9.  **Agent:** Proposed a plan to fix crashes via a comprehensive audit, which was approved. **Status: Implemented.**
-10. **(Start of Fork):** Handoff summary detailed the critical  crash.
+1.  **User (LATEST):** Provided a list of 4 quick fixes after testing the latest version. **Status: Pending Implementation.**
+2.  **Agent:** Called the testing agent to verify the 8 bug fixes from . **Status: Completed.**
+3.  **User:** Confirmed the agent should proceed with all 8 bug fixes from the  file and provided clarification for the CartEditor implementation. **Status: Implemented.**
+4.  **Agent:** Confirmed understanding of the 8 bugs and asked for clarification on the CartEditor. **Status: Completed.**
+5.  **User:** Uploaded  and asked the agent to read and confirm understanding. **Status: Completed.**
+6.  **Agent:** Finished the V3 implementation, updated PRD, and asked the user for the next steps. **Status: Completed.**
+7.  **User:** Said yes, proceed to the V3 implementation plan. **Status: Completed.**
+8.  **Agent:** Confirmed full understanding of the V3 spec from the  file and proposed a plan. **Status: Completed.**
+9.  **User:** Uploaded the V3 spec file and asked the agent to read it. **Status: Completed.**
+10. **Agent:** Requested the user to paste the V3 spec document as it was not in the handoff summary. **Status: Completed.**
 
 **Project Health Check:**
--   **Broken:** The application loads but is not functional, as its logic is incompatible with the new V3 backend state engine. It cannot proceed past the initial screen of the meal planning flow.
+-   **Broken:** While the app builds and runs, the user experience is significantly hampered by the newly identified UI/UX bugs, especially the non-functional Edit buttons and incomplete cart editing feature.
 
 **3rd Party Integrations**
--   **n8n Webhooks:** Used for all backend logic.
+-   **n8n Webhooks:** Backend logic.
 -   **Google Fonts:** , .
 
 **Testing status**
--   **Testing agent used after significant changes:** YES (to verify the defensive programming fixes for v2).
+-   **Testing agent used after significant changes:** YES (used twice, once for V3 spec and once for the first round of bug fixes).
 -   **Troubleshoot agent used after agent stuck in loop:** NO
 -   **Test files created:** None
--   **Known regressions:** None from the bug-fixing phase. The current non-functional state is by design, pending the V3 upgrade.
+-   **Known regressions:** The Edit functionality, which was part of the V3 spec, is still not working as intended.
 
 **Credentials to test flow:**
 N/A
 
 **What agent forgot to execute**
-Nothing. The agent successfully stabilized the application and was awaiting the next set of instructions, which was the comprehensive V3 spec. The next step is to execute that plan.</analysis>
+Nothing. The agent has been following the user's instructions sequentially. The next step is to implement the latest batch of fixes provided by the user.</analysis>
