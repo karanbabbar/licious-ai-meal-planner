@@ -608,16 +608,20 @@ const calculateDistribution = (label, target) => {
 
 // Collapsed Badge for previous responses
 // FIX 4: Now accepts msgs array to look for latest confirmed budget values
+// V3: Collapsed Badge for previous responses
 const CollapsedBadge = ({ type, data, fullData, msgs = [], msgIndex = 0 }) => {
   let text = "";
   switch (type) {
+    case 'supplement_ask':
+      const supplementG = data?.supplement_g || data?.grams || 0;
+      text = supplementG > 0 ? `✓ ${supplementG}g supplements/day` : "✓ No supplements";
+      break;
     case 'budget_setup':
-      // FIX 4: Look for the confirmed distribution in subsequent messages
+      // Look for the confirmed distribution in subsequent messages
       let dist = null;
       let selectedLabel = 'Distribution';
       let proteinTarget = 150;
       
-      // First try to find confirmed budget in subsequent messages
       for (let i = msgIndex + 1; i < msgs.length; i++) {
         const m = msgs[i];
         if (m.data?.budget?.distribution && m.data?.budget?.confirmed) {
@@ -640,20 +644,20 @@ const CollapsedBadge = ({ type, data, fullData, msgs = [], msgIndex = 0 }) => {
         proteinTarget = fullData?.budget?.meal_budget_g || data?.protein_target || 150;
       }
       
-      // Check if we have valid (non-zero) values
       if (dist && dist.breakfast > 0) {
         text = `✓ ${selectedLabel} — ${dist.breakfast}g / ${dist.lunch}g / ${dist.dinner}g`;
       } else {
-        // Fallback: Calculate distribution locally
         const calculated = calculateDistribution(selectedLabel, proteinTarget);
         text = `✓ ${selectedLabel} — ${calculated.breakfast}g / ${calculated.lunch}g / ${calculated.dinner}g`;
       }
       break;
     case 'source_select':
-      text = "✓ Sources selected";
+      const sources = data?.sources || [];
+      text = sources.length > 0 ? `✓ Sources: ${sources.join(', ')}` : "✓ Sources selected";
       break;
     case 'cut_select':
-      text = "✓ Cut type selected";
+      const cut = data?.cut || data?.category;
+      text = cut ? `✓ Cut: ${cut}` : "✓ Cut type selected";
       break;
     case 'product_select':
       const productCount = (data?.products || []).length;
@@ -664,7 +668,27 @@ const CollapsedBadge = ({ type, data, fullData, msgs = [], msgIndex = 0 }) => {
       break;
     case 'meal_confirmed':
       const protein = data?.total_protein ? Math.round(data.total_protein * 10) / 10 : 0;
-      text = data?.meal_label ? `✓ ${data.meal_label} locked — ${protein}g protein` : "✓ Meal locked";
+      text = data?.meal_label ? `✓ ${data.meal_label} locked — ${protein}g` : "✓ Meal locked";
+      break;
+    case 'consolidation':
+      text = "✓ Meal plan confirmed";
+      break;
+    case 'weekly_summary':
+      const totalPrice = data?.total_cart_price || 0;
+      text = totalPrice > 0 ? `✓ Weekly cart — ₹${totalPrice}` : "✓ Weekly plan confirmed";
+      break;
+    case 'delivery_frequency':
+      const freq = data?.frequency || '';
+      const freqLabels = { daily: "Daily", every_2_days: "Every 2 days", every_3_days: "Every 3 days", weekly: "Weekly" };
+      text = freq ? `✓ Delivery: ${freqLabels[freq] || freq}` : "✓ Delivery frequency selected";
+      break;
+    case 'delivery_select':
+      const slot = data?.time_slot || data?.delivery_slot || '';
+      const slotLabels = { morning: "Morning", afternoon: "Afternoon", evening: "Evening" };
+      text = slot ? `✓ Time slot: ${slotLabels[slot] || slot}` : "✓ Time slot selected";
+      break;
+    case 'order_confirmed':
+      text = "✓ Order confirmed!";
       break;
     default:
       text = "✓ Step completed";
