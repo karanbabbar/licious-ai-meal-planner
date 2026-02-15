@@ -916,20 +916,21 @@ const SourceChips = ({ data, onSelect }) => {
   );
 };
 
+// V3: Cut Select Component - single select, skipped for eggs
 const CutChips = ({ data, onSelect }) => {
   const [selected, setSelected] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Defensive: handle alternate field names from backend
+  // V3: Handle ui_data fields
   const category = data?.category || data?.source || data?.protein_source || "Protein";
+  const categoryIcon = { chicken: "🍗", fish: "🐟", mutton: "🍖" }[(category || '').toLowerCase()] || "🍖";
   
-  // DEFENSIVE: Ensure cuts is always an array - handle object, string, or missing data
+  // DEFENSIVE: Ensure cuts is always an array
   let rawCuts = data?.cuts || data?.cut_options || data?.options || [];
   let cuts = [];
   if (Array.isArray(rawCuts)) {
     cuts = rawCuts;
   } else if (typeof rawCuts === 'object' && rawCuts !== null) {
-    // Convert object to array (e.g., { boneless: {...}, bone_in: {...} })
     cuts = Object.entries(rawCuts).map(([key, val]) => 
       typeof val === 'object' ? { name: key, ...val } : key
     );
@@ -939,10 +940,11 @@ const CutChips = ({ data, onSelect }) => {
   
   const handleSelect = (cut) => {
     if (isSubmitting) return;
-    setSelected(cut);
+    const cutName = typeof cut === 'string' ? cut : (cut?.name || cut?.label || cut);
+    setSelected(cutName);
     setIsSubmitting(true);
-    // Send structured JSON instead of text
-    onSelect({ cut: cut });
+    // V3: Send cut selection
+    onSelect({ cut: cutName });
   };
   
   // Don't render if no cuts available
@@ -957,18 +959,27 @@ const CutChips = ({ data, onSelect }) => {
   
   return (
     <div className="si" style={{ padding: 16, background: T.white, borderRadius: 18, border: "1px solid " + T.g[100], boxShadow: T.sh.m, marginTop: 8 }}>
-      <p style={{ fontSize: 13, fontWeight: 700, color: T.dark, marginBottom: 12 }}>{category} cut preference</p>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+        <span style={{ fontSize: 28 }}>{categoryIcon}</span>
+        <div>
+          <p style={{ fontSize: 15, fontWeight: 800, color: T.dark, textTransform: "capitalize" }}>What type of {category}?</p>
+          <p style={{ fontSize: 12, color: T.g[500] }}>Select your preferred cut</p>
+        </div>
+      </div>
+      
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
         {cuts.map((cut, idx) => {
           const cutName = typeof cut === 'string' ? cut : (cut?.name || cut?.label || `Option ${idx + 1}`);
           const isSelected = selected === cutName;
+          
           return (
             <button 
               key={cutName + idx} 
               onClick={() => handleSelect(cutName)}
               disabled={isSubmitting}
               style={{ 
-                display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: T.r.full, 
+                display: "flex", alignItems: "center", gap: 8, 
+                padding: "12px 20px", borderRadius: T.r.full, 
                 border: "2px solid " + (isSelected ? T.brand : T.g[200]), 
                 background: isSelected ? T.brandLt : T.white, 
                 color: isSelected ? T.brand : T.g[700], 
@@ -980,7 +991,11 @@ const CutChips = ({ data, onSelect }) => {
               }}
             >
               {cutName}
-              {isSelected && (isSubmitting ? <div style={{ width: 14, height: 14, border: "2px solid " + T.brand + "40", borderTopColor: T.brand, borderRadius: "50%", animation: "spin .6s linear infinite" }} /> : "  ✓")}
+              {isSelected && (
+                isSubmitting 
+                  ? <div style={{ width: 14, height: 14, border: "2px solid " + T.brand + "40", borderTopColor: T.brand, borderRadius: "50%", animation: "spin .6s linear infinite" }} /> 
+                  : <span style={{ marginLeft: 4 }}>✓</span>
+              )}
             </button>
           );
         })}
