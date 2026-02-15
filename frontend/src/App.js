@@ -1035,6 +1035,7 @@ const CutChips = ({ data, onSelect }) => {
 };
 
 // V3: Product Select Component - GROUP BY SOURCE with "pick 1" per category
+// BUG 2 FIX: Product Select Component - GROUP BY SOURCE, show up to 4 per source
 const ProductCardGrid = ({ data, onSelect }) => {
   const [selected, setSelected] = useState({});  // V3: { source: productName }
   const [submitted, setSubmitted] = useState(false);
@@ -1044,7 +1045,7 @@ const ProductCardGrid = ({ data, onSelect }) => {
   const proteinTarget = data?.protein_target || data?.target || 50;
   const sourcesSelected = data?.sources_selected || [];
   
-  // V3: products_by_source is the preferred grouping structure
+  // BUG 2 FIX: Use products_by_source to get product names per source, then match with full products array
   const productsBySourceMap = data?.products_by_source || {};
   
   // DEFENSIVE: Ensure rawProducts is always an array
@@ -1057,21 +1058,46 @@ const ProductCardGrid = ({ data, onSelect }) => {
     }
   }
   
-  // V3: Group products by category/source
+  // BUG 2 FIX: Build product groups using products_by_source keys
+  // Each source should show up to 4 products (all available), not capped globally
   const productsByCategory = {};
   
-  // Use products_by_source keys if available, otherwise derive from products
-  const sourceKeys = Object.keys(productsBySourceMap).length > 0 
-    ? Object.keys(productsBySourceMap)
-    : [...new Set((Array.isArray(rawProducts) ? rawProducts : []).map(p => (p?.category || p?.source || 'other').toLowerCase()))];
-  
-  sourceKeys.forEach(source => {
-    const sourceProducts = (Array.isArray(rawProducts) ? rawProducts : [])
-      .filter(p => (p?.category || p?.source || '').toLowerCase() === source.toLowerCase());
-    if (sourceProducts.length > 0) {
-      productsByCategory[source] = sourceProducts;
-    }
-  });
+  // If products_by_source exists, use it as the authority for grouping
+  if (Object.keys(productsBySourceMap).length > 0) {
+    Object.keys(productsBySourceMap).forEach(source => {
+      const productNamesForSource = productsBySourceMap[source] || [];
+      // Find full product objects matching these names
+      const sourceProducts = (Array.isArray(rawProducts) ? rawProducts : [])
+        .filter(p => {
+          const productName = p?.product_name || p?.name || '';
+          const productCategory = (p?.category || p?.source || '').toLowerCase();
+          // Match by product name being in the source's list OR by category matching
+          return productNamesForSource.includes(productName) || productCategory === source.toLowerCase();
+        });
+      
+      // If we found products, add them; otherwise try to find by category alone
+      if (sourceProducts.length > 0) {
+        productsByCategory[source] = sourceProducts;
+      } else {
+        // Fallback: get all products matching this category
+        const fallbackProducts = (Array.isArray(rawProducts) ? rawProducts : [])
+          .filter(p => (p?.category || p?.source || '').toLowerCase() === source.toLowerCase());
+        if (fallbackProducts.length > 0) {
+          productsByCategory[source] = fallbackProducts;
+        }
+      }
+    });
+  } else {
+    // Fallback: derive from products array
+    const sourceKeys = [...new Set((Array.isArray(rawProducts) ? rawProducts : []).map(p => (p?.category || p?.source || 'other').toLowerCase()))];
+    sourceKeys.forEach(source => {
+      const sourceProducts = (Array.isArray(rawProducts) ? rawProducts : [])
+        .filter(p => (p?.category || p?.source || '').toLowerCase() === source.toLowerCase());
+      if (sourceProducts.length > 0) {
+        productsByCategory[source] = sourceProducts;
+      }
+    });
+  }
   
   // Calculate how many sources need selections
   const totalSourcesToSelect = Object.keys(productsByCategory).length;
@@ -1105,7 +1131,7 @@ const ProductCardGrid = ({ data, onSelect }) => {
   const categoryIcons = { chicken: '🍗', eggs: '🥚', fish: '🐟', mutton: '🍖' };
   const categoryLabels = { chicken: 'Chicken', eggs: 'Eggs', fish: 'Fish', mutton: 'Mutton' };
   
-  // Render a category section with its products
+  // BUG 2 FIX: Render a category section with ALL its products (up to 4)
   const renderCategorySection = (category, products) => {
     const icon = categoryIcons[(category || '').toLowerCase()] || '🍖';
     const label = categoryLabels[(category || '').toLowerCase()] || category;
@@ -1127,15 +1153,16 @@ const ProductCardGrid = ({ data, onSelect }) => {
             background: selectedProduct ? T.greenLt : T.brandLt, 
             padding: "4px 10px", borderRadius: 99 
           }}>
-            {selectedProduct ? "✓ Selected" : "Pick 1"}
+            {selectedProduct ? "✓ Selected" : "— pick 1"}
           </span>
         </div>
         
+        {/* BUG 2 FIX: Show ALL products for this source (up to 4) */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          {(Array.isArray(products) ? products : []).map((p, i) => {
+          {(Array.isArray(products) ? products : []).slice(0, 4).map((p, i) => {
             const productName = p?.product_name || p?.name || 'Product';
             const productCategory = (p?.category || p?.source || category || 'other').toLowerCase();
-            const isSelected = selected[productCategory] === productName;
+            const isSelected = selected[category.toLowerCase()] === productName;
             
             // V3: Show protein_per_pack for better comparison
             const proteinPerPack = p?.protein_per_pack || 0;
@@ -1146,7 +1173,7 @@ const ProductCardGrid = ({ data, onSelect }) => {
                 : proteinPerPack ? `${Math.round(proteinPerPack)}g/pack` : '';
             
             return (
-              <button key={i} onClick={() => handleProductSelect(p, category)} disabled={submitted} style={{
+              <button key={productName + i} onClick={() => handleProductSelect(p, category)} disabled={submitted} style={{
                 padding: 10, borderRadius: 14, 
                 border: "2px solid " + (isSelected ? T.brand : T.g[200]),
                 background: isSelected ? T.brandLt : T.white, 
@@ -1206,7 +1233,7 @@ const ProductCardGrid = ({ data, onSelect }) => {
         <p style={{ fontSize: 12, color: T.g[400] }}>Select 1 product from each category below</p>
       </div>
       
-      {/* V3: Render each category section */}
+      {/* BUG 2 FIX: Render each category section with all its products */}
       {Object.entries(productsByCategory).map(([category, products]) => 
         renderCategorySection(category, products)
       )}
